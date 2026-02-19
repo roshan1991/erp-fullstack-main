@@ -216,15 +216,15 @@ export function InventoryList() {
                 <Modal.Body>
                     {saveError && <Alert variant="danger">{saveError}</Alert>}
                     <Form>
-                        <Form.Group className="mb-3">
+                        <Form.Group className="mb-3" controlId="formProductName">
                             <Form.Label>Product Name <span className="text-danger">*</span></Form.Label>
                             <Form.Control value={formData.name} onChange={e => f('name', e.target.value)} placeholder="e.g. Wireless Mouse" />
                         </Form.Group>
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
-                                <Form.Label>SKU <span className="text-danger">*</span></Form.Label>
-                                <Form.Control value={formData.sku} onChange={e => f('sku', e.target.value)} placeholder="e.g. MOUSE-001" />
+                                <Form.Label htmlFor="formSku">SKU <span className="text-danger">*</span></Form.Label>
+                                <Form.Control id="formSku" value={formData.sku} onChange={e => f('sku', e.target.value)} placeholder="e.g. MOUSE-001" />
                             </div>
                             <div className="col-md-6 mb-3">
                                 <Form.Label>Barcode</Form.Label>
@@ -250,21 +250,21 @@ export function InventoryList() {
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
-                                <Form.Label>Selling Price ($)</Form.Label>
-                                <Form.Control type="number" min="0" step="0.01" value={formData.price}
+                                <Form.Label htmlFor="formPrice">Selling Price ($)</Form.Label>
+                                <Form.Control id="formPrice" type="number" min="0" step="0.01" value={formData.price}
                                     onChange={e => f('price', parseFloat(e.target.value) || 0)} />
                             </div>
                             <div className="col-md-6 mb-3">
-                                <Form.Label>Cost Price ($)</Form.Label>
-                                <Form.Control type="number" min="0" step="0.01" value={formData.cost_price || 0}
+                                <Form.Label htmlFor="formCostPrice">Cost Price ($)</Form.Label>
+                                <Form.Control id="formCostPrice" type="number" min="0" step="0.01" value={formData.cost_price || 0}
                                     onChange={e => f('cost_price', parseFloat(e.target.value) || 0)} />
                             </div>
                         </div>
 
                         <div className="row">
                             <div className="col-md-6 mb-3">
-                                <Form.Label>Stock Quantity</Form.Label>
-                                <Form.Control type="number" min="0" value={formData.stock_quantity}
+                                <Form.Label htmlFor="formStockQuantity">Stock Quantity</Form.Label>
+                                <Form.Control id="formStockQuantity" type="number" min="0" value={formData.stock_quantity}
                                     onChange={e => f('stock_quantity', parseInt(e.target.value) || 0)} />
                             </div>
                             <div className="col-md-6 mb-3">

@@ -60,11 +60,11 @@ export function LoginPage() {
 
                         <Form onSubmit={handleLogin} className="position-relative">
                             <Form.Group className="mb-4">
-                                <Form.Label className="fw-semibold text-secondary small">User Name</Form.Label>
+                                <Form.Label className="fw-semibold text-secondary small">Username</Form.Label>
                                 <div className="d-flex align-items-center">
                                     <Form.Control
                                         type="text"
-                                        placeholder="User Name"
+                                        placeholder="Username"
                                         value={username}
                                         onChange={(e) => setUsername(e.target.value)}
                                         required
