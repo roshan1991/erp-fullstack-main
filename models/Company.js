@@ -30,6 +30,27 @@ const Company = sequelize.define('Company', {
     website: {
         type: DataTypes.STRING(255),
         allowNull: true
+    },
+    // Bank Details
+    account_name: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+    },
+    account_number: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
+    bank_name: {
+        type: DataTypes.STRING(255),
+        allowNull: true
+    },
+    iban: {
+        type: DataTypes.STRING(50),
+        allowNull: true
+    },
+    swift: {
+        type: DataTypes.STRING(50),
+        allowNull: true
     }
 }, {
     tableName: 'companies',

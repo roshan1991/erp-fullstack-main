@@ -18,7 +18,8 @@ export function OrganizationSettings() {
     const [showCompanyModal, setShowCompanyModal] = useState(false);
     const [editingCompany, setEditingCompany] = useState<Company | null>(null);
     const [companyForm, setCompanyForm] = useState({
-        name: '', address: '', phone: '', email: '', tax_id: '', website: ''
+        name: '', address: '', phone: '', email: '', tax_id: '', website: '',
+        bank_name: '', account_number: '', account_name: '', iban: '', swift: ''
     });
 
     const [showBranchModal, setShowBranchModal] = useState(false);
@@ -58,11 +59,19 @@ export function OrganizationSettings() {
                 phone: company.phone || '',
                 email: company.email || '',
                 tax_id: company.tax_id || '',
-                website: company.website || ''
+                website: company.website || '',
+                bank_name: company.bank_name || '',
+                account_number: company.account_number || '',
+                account_name: company.account_name || '',
+                iban: company.iban || '',
+                swift: company.swift || ''
             });
         } else {
             setEditingCompany(null);
-            setCompanyForm({ name: '', address: '', phone: '', email: '', tax_id: '', website: '' });
+            setCompanyForm({
+                name: '', address: '', phone: '', email: '', tax_id: '', website: '',
+                bank_name: '', account_number: '', account_name: '', iban: '', swift: ''
+            });
         }
         setShowCompanyModal(true);
     };
@@ -274,6 +283,36 @@ export function OrganizationSettings() {
                             <Form.Label>Address</Form.Label>
                             <Form.Control as="textarea" rows={3} value={companyForm.address} onChange={e => setCompanyForm({ ...companyForm, address: e.target.value })} />
                         </Form.Group>
+
+                        <h6 className="mt-4 mb-3 border-bottom pb-2">Bank Details (For Invoicing)</h6>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Bank Name</Form.Label>
+                                    <Form.Control value={companyForm.bank_name} onChange={e => setCompanyForm({ ...companyForm, bank_name: e.target.value })} placeholder="e.g. Chase Bank" />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Account Name</Form.Label>
+                                    <Form.Control value={companyForm.account_name} onChange={e => setCompanyForm({ ...companyForm, account_name: e.target.value })} placeholder="Account Holder Name" />
+                                </Form.Group>
+                            </Col>
+                        </Row>
+                        <Row>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>Account Number</Form.Label>
+                                    <Form.Control value={companyForm.account_number} onChange={e => setCompanyForm({ ...companyForm, account_number: e.target.value })} />
+                                </Form.Group>
+                            </Col>
+                            <Col md={6}>
+                                <Form.Group className="mb-3">
+                                    <Form.Label>IBAN / Swift</Form.Label>
+                                    <Form.Control value={companyForm.iban} onChange={e => setCompanyForm({ ...companyForm, iban: e.target.value })} placeholder="IBAN or Swift Code" />
+                                </Form.Group>
+                            </Col>
+                        </Row>
                     </Modal.Body>
                     <Modal.Footer>
                         <Button variant="secondary" onClick={() => setShowCompanyModal(false)}>Cancel</Button>

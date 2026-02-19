@@ -41,6 +41,11 @@ export interface Company {
     email?: string;
     tax_id?: string;
     website?: string;
+    bank_name?: string;
+    account_number?: string;
+    account_name?: string;
+    iban?: string;
+    swift?: string;
     Branches?: Branch[];
 }
 
