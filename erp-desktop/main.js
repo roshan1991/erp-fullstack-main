@@ -32,8 +32,8 @@ async function createWindow() {
     // Load the React app from the local server
     mainWindow.loadURL(`http://localhost:${backendPort}`);
 
-    // Open the DevTools if you want during development.
-    // mainWindow.webContents.openDevTools();
+    // Open the DevTools to debug the white screen
+    mainWindow.webContents.openDevTools();
 
     mainWindow.on('closed', function () {
         // Dereference the window object

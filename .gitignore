@@ -1,4 +1,7 @@
 node_modules
+erp-desktop/node_modules
+erp-desktop/release
+client/node_modules
 .env
 dist
 build
