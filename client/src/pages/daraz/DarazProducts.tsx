@@ -16,7 +16,7 @@ export function DarazProducts() {
     const fetchProducts = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/daraz/products`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/daraz/products`);
             const data = await response.json();
             setProducts(data.data?.products || []);
         } catch (err: any) {

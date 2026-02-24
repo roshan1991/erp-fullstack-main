@@ -17,7 +17,7 @@ export function DarazOrders() {
     const fetchOrders = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/daraz/orders?status=${statusFilter}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/daraz/orders?status=${statusFilter}`);
             const data = await response.json();
             setOrders(data.data?.orders || []);
         } catch (err: any) {

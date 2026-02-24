@@ -54,7 +54,7 @@ export function DarazSettings() {
     const syncProducts = async () => {
         try {
             // Call backend to sync products
-            await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/daraz/products`);
+            await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/daraz/products`);
             setLastSync(new Date());
             localStorage.setItem("daraz_last_sync", new Date().toISOString());
         } catch (error) {

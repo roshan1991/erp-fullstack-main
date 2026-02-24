@@ -20,7 +20,7 @@ export function DarazDashboard() {
         try {
             setLoading(true);
             // Fetch products count
-            const productsRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/daraz/products?limit=1`);
+            const productsRes = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/daraz/products?limit=1`);
             const productsData = await productsRes.json();
 
             // Fetch pending orders
