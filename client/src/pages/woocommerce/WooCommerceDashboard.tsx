@@ -25,7 +25,7 @@ export function WooCommerceDashboard() {
             console.log("Fetching WooCommerce dashboard data...");
             console.log("Token exists:", !!token);
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/woocommerce/reports/totals`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/woocommerce/reports/totals`, {
                 headers: {
                     "Authorization": `Bearer ${token}`,
                     "Content-Type": "application/json"

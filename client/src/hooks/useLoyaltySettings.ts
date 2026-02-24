@@ -21,7 +21,7 @@ export const useLoyaltySettings = () => {
         try {
             setLoading(true);
             const token = localStorage.getItem('access_token');
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/loyalty/settings`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/loyalty/settings`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
                 }
@@ -61,7 +61,7 @@ export const useLoyaltySettings = () => {
                 is_enabled: newSettings.isEnabled
             };
 
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/loyalty/settings`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/loyalty/settings`, {
                 method: 'PUT',
                 headers: {
                     'Authorization': `Bearer ${token}`,

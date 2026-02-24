@@ -249,7 +249,7 @@ export function POSInterface() {
         if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
             return imagePath;
         }
-        return `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
+        return `${import.meta.env.VITE_API_URL || ''}${imagePath.startsWith('/') ? '' : '/'}${imagePath}`;
     };
 
     return (

@@ -18,7 +18,7 @@ export function WooCommerceOrders() {
             setLoading(true);
             const token = localStorage.getItem("access_token");
             const status = statusFilter !== "any" ? `&status=${statusFilter}` : "";
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/woocommerce/orders?page=${page}&per_page=20${status}`, {
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/woocommerce/orders?page=${page}&per_page=20${status}`, {
                 headers: {
                     "Authorization": `Bearer ${token}`
                 }

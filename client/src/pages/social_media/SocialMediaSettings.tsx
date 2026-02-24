@@ -10,7 +10,7 @@ export function SocialMediaSettings() {
         whatsappPhoneNumberId: "0719195591",
         whatsappAccessToken: "EAAIfMg1iTR4BQCTvHw2ObjGXgnp69UF5z8CZC8JgvgG0oMB9JRRpndgCMFZCYvTfuGiHv3TNpyM0ataHVFPTDltQhd5AuPiH3WZB9ZCwj9NBqytIRAUYPZAzGsZCxRaNfstFhjK669Phk7VDcM8mYUUDRj3pMA3AavYO24W8bKD98Sud5MHgS7zA1as5BKqKZBULSwgbnMdpFBNNO3i0kftQ4Jst3zErjC5AQV10h6EDUUDBejJLZAXZC7KRhKy4VRu73O1ISZCp04XtdatgJRMAbliJRptKxilLLNmRZAm6AZDZD",
         webhookVerifyToken: "",
-        webhookBaseUrl: `${import.meta.env.VITE_API_URL || 'http://localhost:8000'}`
+        webhookBaseUrl: `${import.meta.env.VITE_API_URL || ''}`
     });
     const [saved, setSaved] = useState(false);
 

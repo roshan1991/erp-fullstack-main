@@ -20,7 +20,7 @@ export function SocialMediaDashboard() {
         try {
             setLoading(true);
             // Fetch messages
-            const messagesRes = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/social-media/messages`);
+            const messagesRes = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/social-media/messages`);
             const messagesData = await messagesRes.json();
 
             // Fetch campaigns

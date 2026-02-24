@@ -19,7 +19,7 @@ export function UnifiedInbox() {
         try {
             setLoading(true);
             const platform = platformFilter === "all" ? "" : `?platform=${platformFilter}`;
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/social-media/messages${platform}`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/social-media/messages${platform}`);
             const data = await response.json();
             setConversations(data.data || []);
         } catch (err: any) {

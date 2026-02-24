@@ -15,7 +15,7 @@ export function Campaigns() {
     const fetchCampaigns = async () => {
         try {
             setLoading(true);
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/social-media/campaigns`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/social-media/campaigns`);
             const data = await response.json();
             setCampaigns(data.data || []);
         } catch (err: any) {
@@ -27,7 +27,7 @@ export function Campaigns() {
 
     const viewInsights = async (campaignId: string) => {
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1'}/social-media/campaigns/${campaignId}/insights`);
+            const response = await fetch(`${import.meta.env.VITE_API_URL || '/api/v1'}/social-media/campaigns/${campaignId}/insights`);
             const data = await response.json();
             setSelectedCampaign(data.data?.[0]);
         } catch (err: any) {
