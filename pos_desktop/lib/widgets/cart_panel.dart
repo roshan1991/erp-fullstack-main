@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
+import '../services/receipt_service.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({Key? key}) : super(key: key);
@@ -83,13 +84,46 @@ class _CartPanelState extends State<CartPanel> {
               : '❌ Failed to place order.'),
           backgroundColor: success ? Colors.green : Colors.red,
         ));
-        
+
         if (success) {
-          // Mock print action
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('🖨️ Printing receipt...'),
-            duration: Duration(seconds: 1),
-          ));
+          final printerName = provider.selectedPrinterName;
+          if (printerName == null || printerName.isEmpty) {
+            // No printer configured — show a gentle warning
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('⚠️ No printer selected. Go to Settings → Receipt Printer.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          } else {
+            // Show "printing" toast immediately
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('🖨️ Printing receipt on "$printerName"…'),
+                duration: const Duration(seconds: 2),
+              ),
+            );
+
+            // Grab the most recent order from history and print
+            if (provider.orderHistory.isNotEmpty) {
+              final order = provider.orderHistory.first;
+              final error = await ReceiptService.printReceipt(
+                order,
+                printerName,
+                taxRatePercent: provider.taxRatePercent,
+              );
+              if (mounted && error != null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('❌ Print failed: $error'),
+                    backgroundColor: Colors.red,
+                    duration: const Duration(seconds: 4),
+                  ),
+                );
+              }
+            }
+          }
         }
       }
     }
@@ -373,7 +407,8 @@ class _CartPanelState extends State<CartPanel> {
                 ],
 
                 const SizedBox(height: 10),
-                _summaryRow('Tax (10%)', 'LKR ${provider.tax.toStringAsFixed(2)}'),
+                _summaryRow('Tax (${provider.taxRatePercent.toStringAsFixed(provider.taxRatePercent == provider.taxRatePercent.roundToDouble() ? 0 : 1)}%)',
+                    'LKR ${provider.tax.toStringAsFixed(2)}'),
 
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 14),

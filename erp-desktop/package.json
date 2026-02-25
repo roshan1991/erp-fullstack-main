@@ -12,7 +12,7 @@
     "appId": "com.erp.desktop",
     "productName": "ERP Desktop",
     "directories": {
-      "output": "release"
+      "output": "dist_app"
     },
     "win": {
       "target": "nsis",

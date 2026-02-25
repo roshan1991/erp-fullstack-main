@@ -3,6 +3,7 @@ import '../screens/history_screen.dart';
 import '../screens/main_pos_screen.dart';
 import '../screens/promos_screen.dart';
 import '../screens/settings_screen.dart';
+import '../screens/suppliers_screen.dart';
 
 class Sidebar extends StatelessWidget {
   final String activePage;
@@ -68,6 +69,20 @@ class Sidebar extends StatelessWidget {
               if (activePage != 'Promos') {
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const PromosScreen()),
+                );
+              }
+            },
+          ),
+          const SizedBox(height: 32),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.local_offer,
+            label: 'Supplier',
+            isActive: activePage == 'Supplier',
+            onTap: () {
+              if (activePage != 'Supplier') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const SuppliersScreen()),
                 );
               }
             },

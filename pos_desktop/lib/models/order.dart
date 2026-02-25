@@ -25,13 +25,33 @@ class OrderModel {
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     var list = json['items'] as List? ?? [];
     List<CartItem> cartItems = list.map((i) {
-      // Handle the case where the API returns product details inside items
-      final productJson = i['product'] ?? i;
+      final item = Map<String, dynamic>.from(i as Map);
+
+      // The backend returns a flat item with product_name, not a nested product object.
+      // Fall back to a nested product map if present (e.g. from local mock data).
+      final productName = item['product_name']?.toString()
+          ?? item['name']?.toString()
+          ?? (item['product'] is Map ? item['product']['name']?.toString() : null)
+          ?? 'Unknown Product';
+
+      final productId   = (item['product_id'] ?? item['id'] ?? 0).toString();
+      final unitPrice   = double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0;
+      final totalPrice  = double.tryParse(item['total_price']?.toString() ?? '0') ?? 0.0;
+      final quantity    = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
+
       return CartItem(
-        product: Product.fromJson(productJson),
-        quantity: i['quantity'] ?? 1,
+        product: Product(
+          id: productId,
+          name: productName,
+          description: '',
+          price: unitPrice,
+          category: '',
+          imageUrl: '',
+        ),
+        quantity: quantity,
       );
     }).toList();
+
 
     return OrderModel(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',

@@ -1,10 +1,44 @@
 const express = require('express');
 const router = express.Router();
 const { Order, OrderItem, Customer, Product } = require('../models');
-// Note: Product might need individual import if not exported well from models/index.js, 
-// but assuming models/index.js exports it.
+const Settings = require('../models/Settings');
 const { authenticate } = require('../middleware/auth');
-const sequelize = require('../config/database'); // For transaction
+const sequelize = require('../config/database');
+
+// ─── POS Settings ────────────────────────────────────────────────────────────
+
+// GET  /api/v1/pos/settings  — returns { tax_rate }
+router.get('/settings', authenticate, async (req, res) => {
+    try {
+        const row = await Settings.findOne({ where: { key: 'pos_tax_rate' } });
+        res.json({ tax_rate: row ? parseFloat(row.value) : 10.0 });
+    } catch (err) {
+        console.error('Get POS settings error:', err);
+        res.status(500).json({ detail: 'Failed to fetch settings' });
+    }
+});
+
+// PUT  /api/v1/pos/settings  — body: { tax_rate: number }
+router.put('/settings', authenticate, async (req, res) => {
+    try {
+        const { tax_rate } = req.body;
+        const val = parseFloat(tax_rate);
+        if (isNaN(val) || val < 0 || val > 100) {
+            return res.status(400).json({ detail: 'tax_rate must be 0–100' });
+        }
+        await Settings.upsert({
+            key: 'pos_tax_rate',
+            value: val.toString(),
+            group: 'pos'
+        });
+        res.json({ tax_rate: val });
+    } catch (err) {
+        console.error('Update POS settings error:', err);
+        res.status(500).json({ detail: 'Failed to update settings' });
+    }
+});
+
+
 
 // --- POS (Point of Sale) ---
 

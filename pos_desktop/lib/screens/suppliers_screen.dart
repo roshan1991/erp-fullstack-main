@@ -145,7 +145,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                     textColor: Colors.white,
                     fontSize: 20,
                     type: VirtualKeyboardType.Alphanumeric,
-                    onKeyPress: _onKeyPress,
+                    postKeyPress: _onKeyPress,
                   ),
                 ],
               ),

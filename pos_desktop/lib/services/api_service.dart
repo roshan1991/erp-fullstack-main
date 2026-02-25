@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../models/product.dart';
 import '../models/promo.dart';
 import '../models/order.dart';
+import '../models/supplier.dart';
 
 class ApiService {
   String baseUrl = 'http://localhost:3000/api/v1';
@@ -117,6 +118,20 @@ class ApiService {
     }
   }
 
+  Future<bool> createProduct(Map<String, dynamic> productData) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/products'),
+        headers: _authHeaders,
+        body: jsonEncode(productData),
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      lastError = 'Create product failed: $e';
+      return false;
+    }
+  }
+
   Future<bool> submitOrder(List<Map<String, dynamic>> orderItems, double totalAmount, {String paymentMethod = 'CASH'}) async {
     lastError = null;
     try {
@@ -180,6 +195,35 @@ class ApiService {
     }
   }
 
+  // Suppliers
+  Future<List<Supplier>> fetchSuppliers() async {
+    try {
+      final response = await http.get(Uri.parse('$baseUrl/supply-chain/suppliers'), headers: _authHeaders);
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        return data.map((j) => Supplier.fromJson(Map<String, dynamic>.from(j))).toList();
+      }
+      return [];
+    } catch (e) {
+      print('Fetch suppliers failed: $e');
+      return [];
+    }
+  }
+
+  Future<bool> createSupplier(Map<String, dynamic> supplierData) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/supply-chain/suppliers'),
+        headers: {..._authHeaders, 'Content-Type': 'application/json'},
+        body: jsonEncode(supplierData),
+      );
+      return response.statusCode == 200 || response.statusCode == 201;
+    } catch (e) {
+      print('Create supplier failed: $e');
+      return false;
+    }
+  }
+
   Future<List<Promo>> fetchPromos() async {
     lastError = null;
     try {
@@ -238,6 +282,34 @@ class ApiService {
       return true;
     } catch (e) {
       lastError = 'Delete error: $e';
+      return false;
+    }
+  }
+
+  /// Fetches POS settings from the backend. Returns a map like {tax_rate: 10.0}.
+  Future<Map<String, dynamic>> fetchPosSettings() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/pos/settings'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode == 200) {
+        return Map<String, dynamic>.from(json.decode(response.body) as Map);
+      }
+    } catch (_) {}
+    return {'tax_rate': 10.0}; // default fallback
+  }
+
+  /// Saves POS settings to the backend.
+  Future<bool> savePosSettings(Map<String, dynamic> settings) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/pos/settings'),
+        headers: {..._authHeaders, 'Content-Type': 'application/json'},
+        body: json.encode(settings),
+      );
+      return response.statusCode == 200;
+    } catch (_) {
       return false;
     }
   }
