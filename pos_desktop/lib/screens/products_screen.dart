@@ -4,6 +4,7 @@ import '../providers/pos_provider.dart';
 import '../models/product.dart';
 import '../widgets/sidebar.dart';
 import 'package:virtual_keyboard_multi_language/virtual_keyboard_multi_language.dart';
+import 'package:file_picker/file_picker.dart';
 
 class ProductsScreen extends StatefulWidget {
   const ProductsScreen({Key? key}) : super(key: key);
@@ -163,15 +164,26 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   void _showProductDialog(BuildContext context, {Product? product}) {
     final isEditing = product != null;
+    final provider = Provider.of<PosProvider>(context, listen: false);
     
-    // We assume the model 'id' is present.
-    // SKU is missing from the dart model, but we need it for creation. 
-    // Let's generate a random SKU if creating.
     final nameCtrl = TextEditingController(text: product?.name ?? '');
     final priceCtrl = TextEditingController(text: product != null ? product.price.toString() : '');
-    final categoryCtrl = TextEditingController(text: product?.category ?? '');
     final descCtrl = TextEditingController(text: product?.description ?? '');
     final stockCtrl = TextEditingController(text: product != null ? product.stockCount.toString() : '');
+    final newCategoryCtrl = TextEditingController();
+
+    final selectableCategories = provider.categories.where((c) => c != 'All').toList();
+    if (selectableCategories.isEmpty) selectableCategories.add('Uncategorized');
+
+    String selectedCategory = product?.category ?? selectableCategories.first;
+    if (!selectableCategories.contains(selectedCategory) && selectedCategory != 'Uncategorized') {
+      selectedCategory = 'New Category...';
+      newCategoryCtrl.text = product?.category ?? '';
+    }
+    
+    bool isNewCategory = selectedCategory == 'New Category...';
+    String imageUrl = product?.imageUrl ?? '';
+    bool isUploadingImage = false;
 
     showDialog(
       context: context,
@@ -183,9 +195,84 @@ class _ProductsScreenState extends State<ProductsScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                // --- Image Picker ---
+                GestureDetector(
+                  onTap: isUploadingImage ? null : () async {
+                    FilePickerResult? result = await FilePicker.platform.pickFiles(type: FileType.image);
+                    if (result != null && result.files.single.path != null) {
+                      setDlgState(() => isUploadingImage = true);
+                      final url = await provider.uploadProductImage(result.files.single.path!);
+                      setDlgState(() {
+                        isUploadingImage = false;
+                        if (url != null) {
+                           imageUrl = url;
+                        }
+                      });
+                    }
+                  },
+                  child: Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1E1E2C),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade800),
+                    ),
+                    child: isUploadingImage 
+                        ? const Center(child: CircularProgressIndicator())
+                        : imageUrl.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  imageUrl.startsWith('http') ? imageUrl : 'https://erp.reon.lk$imageUrl',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (c,e,s) => const Icon(Icons.broken_image, color: Colors.grey)),
+                              )
+                            : const Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.add_a_photo, color: Colors.grey),
+                                  SizedBox(height: 4),
+                                  Text('Add Image', style: TextStyle(color: Colors.grey, fontSize: 10)),
+                                ],
+                              ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
                 _dialogField('Product Name', nameCtrl),
                 const SizedBox(height: 12),
-                _dialogField('Category', categoryCtrl),
+
+                // --- Category Dropdown ---
+                DropdownButtonFormField<String>(
+                  value: selectableCategories.contains(selectedCategory) ? selectedCategory : 'New Category...',
+                  dropdownColor: const Color(0xFF1E1E2C),
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: const Color(0xFF1E1E2C),
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  items: [
+                    ...selectableCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                    if (!selectableCategories.contains('Uncategorized'))
+                      const DropdownMenuItem(value: 'Uncategorized', child: Text('Uncategorized')),
+                    const DropdownMenuItem(value: 'New Category...', child: Text('New Category...', style: TextStyle(color: Color(0xFFFF6B6B)))),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setDlgState(() {
+                        selectedCategory = val;
+                        isNewCategory = val == 'New Category...';
+                      });
+                    }
+                  },
+                ),
+                if (isNewCategory) ...[
+                  const SizedBox(height: 8),
+                  _dialogField('Enter New Category Name', newCategoryCtrl),
+                ],
+
                 const SizedBox(height: 12),
                 _dialogField('Price (LKR)', priceCtrl, isNumber: true),
                 const SizedBox(height: 12),
@@ -199,11 +286,10 @@ class _ProductsScreenState extends State<ProductsScreen> {
             TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
             ElevatedButton(
               onPressed: () async {
-                final provider = Provider.of<PosProvider>(context, listen: false);
-                
                 final valPrice = double.tryParse(priceCtrl.text.trim()) ?? 0;
                 final valStock = int.tryParse(stockCtrl.text.trim()) ?? 0;
                 final valName = nameCtrl.text.trim();
+                final finalCategory = isNewCategory ? newCategoryCtrl.text.trim() : selectedCategory;
                 
                 if (valName.isEmpty) {
                    ScaffoldMessenger.of(context).showSnackBar(
@@ -212,15 +298,15 @@ class _ProductsScreenState extends State<ProductsScreen> {
                    return;
                 }
 
-                // If creating, we must generate a SKU since backend requires it
-                final sku = isEditing ? null : 'SKU-${DateTime.now().millisecondsSinceEpoch}';
+                final sku = isEditing ? null : 'SKU-\${DateTime.now().millisecondsSinceEpoch}';
 
                 final data = {
                   'name': valName,
                   'description': descCtrl.text.trim(),
                   'price': valPrice,
-                  'category': categoryCtrl.text.trim(),
+                  'category': finalCategory.isEmpty ? 'Uncategorized' : finalCategory,
                   'stock_quantity': valStock,
+                  'image_url': imageUrl,
                 };
                 
                 if (!isEditing) {

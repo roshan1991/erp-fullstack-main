@@ -6,7 +6,7 @@ import '../models/order.dart';
 import '../models/supplier.dart';
 
 class ApiService {
-  String baseUrl = 'http://localhost:3000/api/v1';
+  String baseUrl = 'https://erp.reon.lk/api/v1';
 
   String? _token;
   String _userRole = 'cashier'; // default

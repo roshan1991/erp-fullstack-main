@@ -47,6 +47,7 @@ class OrderModel {
           price: unitPrice,
           category: '',
           imageUrl: '',
+          sku: '',
         ),
         quantity: quantity,
       );

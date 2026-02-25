@@ -33,7 +33,9 @@ class ProductCard extends StatelessWidget {
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
                   child: product.imageUrl.isNotEmpty
                       ? Image.network(
-                          product.imageUrl,
+                          product.imageUrl.startsWith('http') 
+                              ? product.imageUrl 
+                              : 'https://erp.reon.lk${product.imageUrl}',
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) =>
                               _buildImagePlaceholder(),

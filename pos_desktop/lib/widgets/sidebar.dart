@@ -5,6 +5,7 @@ import '../screens/promos_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/suppliers_screen.dart';
 import '../screens/products_screen.dart';
+import '../screens/barcodes_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
 
@@ -103,6 +104,20 @@ class Sidebar extends StatelessWidget {
                 if (activePage != 'Products') {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 32),
+            _buildMenuItem(
+              context: context,
+              icon: Icons.qr_code_2,
+              label: 'Barcodes',
+              isActive: activePage == 'Barcodes',
+              onTap: () {
+                if (activePage != 'Barcodes') {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const BarcodesScreen()),
                   );
                 }
               },

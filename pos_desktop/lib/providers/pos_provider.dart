@@ -79,7 +79,7 @@ class PosProvider with ChangeNotifier {
         .toSet()
         .toList();
     cats.sort();
-    return cats;
+    return ['All', ...cats];
   }
 
   double get subtotal => _cart.fold(0, (sum, item) => sum + item.totalPrice);
@@ -245,7 +245,7 @@ class PosProvider with ChangeNotifier {
   }
 
   List<Product> get filteredProducts {
-    if (_selectedCategory == null) return _products;
+    if (_selectedCategory == null || _selectedCategory == 'All') return _products;
     return _products.where((p) => p.category == _selectedCategory).toList();
   }
 
