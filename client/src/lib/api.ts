@@ -46,6 +46,7 @@ export interface Company {
     account_name?: string;
     iban?: string;
     swift?: string;
+    logo_url?: string;
     Branches?: Branch[];
 }
 
@@ -181,6 +182,17 @@ export const createCompany = async (company: Partial<Company>): Promise<Company>
 
 export const updateCompany = async (id: number, company: Partial<Company>): Promise<Company> => {
     const response = await api.put<Company>(`/companies/${id}`, company);
+    return response.data;
+};
+
+export const uploadCompanyLogo = async (companyId: number, file: File): Promise<{ logo_url: string; company: Company }> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    const response = await api.post<{ logo_url: string; company: Company }>(
+        `/companies/${companyId}/logo`,
+        formData,
+        { headers: { 'Content-Type': 'multipart/form-data' } }
+    );
     return response.data;
 };
 

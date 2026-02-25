@@ -1,11 +1,14 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/product.dart';
+import '../models/promo.dart';
 
 class ApiService {
-  static const String baseUrl = 'http://localhost:3000/api/v1';
+  String baseUrl = 'http://localhost:3000/api/v1';
 
   String? _token;
+  String _userRole = 'cashier'; // default
+  String get userRole => _userRole;
 
   // Singleton pattern
   static final ApiService _instance = ApiService._internal();
@@ -14,10 +17,16 @@ class ApiService {
 
   bool get isAuthenticated => _token != null;
 
+  String? lastError;
+
+  void updateBaseUrl(String newUrl) {
+    baseUrl = newUrl;
+  }
+
   /// Login with username/password, stores JWT token.
   Future<bool> login(String username, String password) async {
+    lastError = null;
     try {
-      // Backend expects multipart/form-data
       final request = http.MultipartRequest(
         'POST',
         Uri.parse('$baseUrl/login/access-token'),
@@ -31,17 +40,37 @@ class ApiService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         _token = data['access_token'];
+        await _fetchUserRole();
         return true;
+      } else {
+        lastError = 'Login failed (${response.statusCode})';
+        return false;
       }
-      return false;
     } catch (e) {
-      print('Login failed: $e');
+      lastError = 'Connection error: $e';
       return false;
     }
   }
 
   void logout() {
     _token = null;
+    _userRole = 'cashier';
+    lastError = null;
+  }
+
+  Future<void> _fetchUserRole() async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/users/me'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        _userRole = data['role'] ?? 'cashier';
+      }
+    } catch (e) {
+      print('Failed to fetch user role: $e');
+    }
   }
 
   Map<String, String> get _authHeaders => {
@@ -49,39 +78,53 @@ class ApiService {
     if (_token != null) 'Authorization': 'Bearer $_token',
   };
 
-  /// Fetches products from the backend.
-  /// Response shape: { products: [...] }
   Future<List<Product>> fetchProducts() async {
+    lastError = null;
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/products?limit=200'),
         headers: _authHeaders,
-      );
+      ).timeout(const Duration(seconds: 10));
 
       if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        final List<dynamic> productList = data['products'] ?? data;
-        return productList.map((json) => Product.fromJson(json)).toList();
+        final dynamic decoded = json.decode(response.body);
+        List<dynamic> productList;
+        if (decoded is List) {
+          productList = decoded;
+        } else if (decoded is Map) {
+          final val = decoded['products'] ?? decoded['data'] ?? decoded['items'];
+          productList = val is List ? val : [];
+        } else {
+          productList = [];
+        }
+        
+        try {
+          return productList.map((j) => Product.fromJson(j as Map<String, dynamic>)).toList();
+        } catch (parseError) {
+          lastError = 'Data parsing error: $parseError';
+          print('Product parsing error: $parseError');
+          return [];
+        }
       } else {
-        print('Products API error ${response.statusCode}: ${response.body}');
-        return _getMockProducts();
+        lastError = 'Server error ${response.statusCode}';
+        return [];
       }
     } catch (e) {
-      print('Failed to load products from API: $e. Using mock data.');
-      return _getMockProducts();
+      lastError = 'Cannot reach server. Is it running on port 3000?';
+      print('fetchProducts failed: $e');
+      return [];
     }
   }
 
-  /// Submits a POS order to the backend.
-  /// Expects items with product_id, quantity, unit_price.
-  Future<bool> submitOrder(List<Map<String, dynamic>> orderItems, double totalAmount) async {
+  Future<bool> submitOrder(List<Map<String, dynamic>> orderItems, double totalAmount, {String paymentMethod = 'CASH'}) async {
+    lastError = null;
     try {
       final payload = {
         'total_amount': totalAmount,
         'status': 'COMPLETED',
         'source': 'POS',
         'payments': [
-          {'method': 'CASH', 'amount': totalAmount}
+          {'method': paymentMethod, 'amount': totalAmount}
         ],
         'items': orderItems.map((item) => {
           'product_id': item['productId'],
@@ -96,27 +139,76 @@ class ApiService {
         body: jsonEncode(payload),
       );
 
-      return response.statusCode == 200 || response.statusCode == 201;
+      if (response.statusCode != 200 && response.statusCode != 201) {
+        lastError = 'Checkout failed (${response.statusCode}): ${response.body}';
+        return false;
+      }
+      return true;
     } catch (e) {
-      print('Checkout failed: $e');
+      lastError = 'Checkout error: $e';
       return false;
     }
   }
 
-  List<Product> _getMockProducts() {
-    return [
-      Product(id: '1', name: 'Original Burger', description: 'Classic beef burger', price: 5.99, imageUrl: '', category: 'Burger', stockCount: 11),
-      Product(id: '2', name: 'Double Burger', description: 'Double beef patty', price: 10.99, imageUrl: '', category: 'Burger', stockCount: 11),
-      Product(id: '3', name: 'Cheese Burger', description: 'Burger with extra cheese', price: 6.99, imageUrl: '', category: 'Burger', stockCount: 9),
-      Product(id: '4', name: 'Double Cheese Burger', description: 'Double cheese and patty', price: 12.99, imageUrl: '', category: 'Burger', stockCount: 11),
-      Product(id: '5', name: 'Spicy Burger', description: 'Spicy chicken burger', price: 5.99, imageUrl: '', category: 'Burger', stockCount: 11),
-      Product(id: '6', name: 'Special Black Burger', description: 'Black bun beef burger', price: 7.39, imageUrl: '', category: 'Burger', stockCount: 11),
-      Product(id: '7', name: 'Pad Thai', description: 'Classic Pad Thai noodles', price: 8.99, imageUrl: '', category: 'Noodles', stockCount: 8),
-      Product(id: '8', name: 'Ramen', description: 'Japanese style ramen', price: 9.99, imageUrl: '', category: 'Noodles', stockCount: 5),
-      Product(id: '9', name: 'Coca Cola', description: 'Chilled Coca Cola', price: 2.50, imageUrl: '', category: 'Drinks', stockCount: 20),
-      Product(id: '10', name: 'Lemonade', description: 'Fresh squeezed lemonade', price: 3.50, imageUrl: '', category: 'Drinks', stockCount: 15),
-      Product(id: '11', name: 'Chocolate Cake', description: 'Rich chocolate cake', price: 6.50, imageUrl: '', category: 'Desserts', stockCount: 7),
-      Product(id: '12', name: 'Ice Cream', description: 'Vanilla ice cream', price: 3.99, imageUrl: '', category: 'Desserts', stockCount: 10),
-    ];
+  Future<List<Promo>> fetchPromos() async {
+    lastError = null;
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/coupons'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode == 200) {
+        final List<dynamic> data = json.decode(response.body);
+        try {
+          return data.map((j) => Promo.fromJson(j as Map<String, dynamic>)).toList();
+        } catch (parseError) {
+          lastError = 'Promo parsing error: $parseError';
+          return [];
+        }
+      } else {
+        lastError = 'Failed to fetch promos (${response.statusCode})';
+        return [];
+      }
+    } catch (e) {
+      lastError = 'Promo fetch error: $e';
+      return [];
+    }
+  }
+
+  Future<Promo?> createPromo(Map<String, dynamic> promoData) async {
+    lastError = null;
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/coupons'),
+        headers: _authHeaders,
+        body: jsonEncode(promoData),
+      );
+      if (response.statusCode == 201) {
+        return Promo.fromJson(json.decode(response.body));
+      }
+      lastError = 'Create promo failed (${response.statusCode})';
+      return null;
+    } catch (e) {
+      lastError = 'Create promo error: $e';
+      return null;
+    }
+  }
+
+  Future<bool> deletePromo(String promoId) async {
+    lastError = null;
+    try {
+      final response = await http.delete(
+        Uri.parse('$baseUrl/coupons/$promoId'),
+        headers: _authHeaders,
+      );
+      if (response.statusCode != 200) {
+        lastError = 'Delete failed (${response.statusCode})';
+        return false;
+      }
+      return true;
+    } catch (e) {
+      lastError = 'Delete error: $e';
+      return false;
+    }
   }
 }

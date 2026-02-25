@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
+import '../screens/history_screen.dart';
+import '../screens/main_pos_screen.dart';
+import '../screens/promos_screen.dart';
+import '../screens/settings_screen.dart';
 
 class Sidebar extends StatelessWidget {
-  const Sidebar({Key? key}) : super(key: key);
+  final String activePage;
+
+  const Sidebar({Key? key, this.activePage = 'Home'}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 100,
-      color: const Color(0xFF1E1E2C),
+      color: const Color(0xFF1A1A28),
       child: Column(
         children: [
           const SizedBox(height: 32),
@@ -21,53 +27,107 @@ class Sidebar extends StatelessWidget {
             child: const Icon(Icons.fastfood, color: Colors.white, size: 32),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'POSFood',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          ),
+          const Text('POSFood', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
           const SizedBox(height: 48),
 
           // Menu Items
-          _buildMenuItem(Icons.home, 'Home', isActive: true),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.menu_book,
+            label: 'Menu',
+            isActive: activePage == 'Home',
+            onTap: () {
+              if (activePage != 'Home') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const MainPosScreen()),
+                );
+              }
+            },
+          ),
           const SizedBox(height: 32),
-          _buildMenuItem(Icons.menu_book, 'Menu'),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.history,
+            label: 'History',
+            isActive: activePage == 'History',
+            onTap: () {
+              if (activePage != 'History') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const HistoryScreen()),
+                );
+              }
+            },
+          ),
           const SizedBox(height: 32),
-          _buildMenuItem(Icons.history, 'History'),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.local_offer,
+            label: 'Promos',
+            isActive: activePage == 'Promos',
+            onTap: () {
+              if (activePage != 'Promos') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const PromosScreen()),
+                );
+              }
+            },
+          ),
           const SizedBox(height: 32),
-          _buildMenuItem(Icons.local_offer, 'Promos'),
-          const SizedBox(height: 32),
-          _buildMenuItem(Icons.settings, 'Settings'),
+          _buildMenuItem(
+            context: context,
+            icon: Icons.settings,
+            label: 'Settings',
+            isActive: activePage == 'Settings',
+            onTap: () {
+              if (activePage != 'Settings') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              }
+            },
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildMenuItem(IconData icon, String label, {bool isActive = false}) {
-    return Container(
-      width: 80,
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: isActive
-          ? BoxDecoration(
-              color: const Color(0xFFFF6B6B).withOpacity(0.2),
-              borderRadius: BorderRadius.circular(16),
-            )
-          : null,
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: isActive ? const Color(0xFFFF6B6B) : Colors.grey,
-            size: 28,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: isActive ? const Color(0xFFFF6B6B) : Colors.grey,
-              fontSize: 12,
+  Widget _buildMenuItem({
+    required BuildContext context,
+    required IconData icon,
+    required String label,
+    bool isActive = false,
+    VoidCallback? onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 80,
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        decoration: isActive
+            ? BoxDecoration(
+                color: const Color(0xFFFF6B6B).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(16),
+              )
+            : null,
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              color: isActive ? const Color(0xFFFF6B6B) : Colors.grey[600],
+              size: 26,
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            Text(
+              label,
+              style: TextStyle(
+                color: isActive ? const Color(0xFFFF6B6B) : Colors.grey[600],
+                fontSize: 11,
+                fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

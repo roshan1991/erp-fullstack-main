@@ -51,6 +51,10 @@ const Company = sequelize.define('Company', {
     swift: {
         type: DataTypes.STRING(50),
         allowNull: true
+    },
+    logo_url: {
+        type: DataTypes.STRING(500),
+        allowNull: true
     }
 }, {
     tableName: 'companies',

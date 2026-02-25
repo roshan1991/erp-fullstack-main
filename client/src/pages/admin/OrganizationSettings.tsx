@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Container, Row, Col, Card, Table, Button, Form, Modal, Alert, Badge, Tabs, Tab } from 'react-bootstrap';
-import { Edit2, Trash2, Plus, Phone as PhoneIcon, Mail } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Container, Row, Col, Card, Table, Button, Form, Modal, Alert, Badge, Tabs, Tab, Spinner } from 'react-bootstrap';
+import { Edit2, Trash2, Plus, Phone as PhoneIcon, Mail, Upload, X, Image as ImageIcon, CheckCircle } from 'lucide-react';
 import {
-    getCompanies, createCompany, updateCompany,
+    getCompanies, createCompany, updateCompany, uploadCompanyLogo,
     getBranches, createBranch, updateBranch, deleteBranch,
     type Company, type Branch
 } from '../../lib/api';
@@ -13,6 +13,7 @@ export function OrganizationSettings() {
     const [branches, setBranches] = useState<Branch[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [success, setSuccess] = useState('');
 
     // Modal States
     const [showCompanyModal, setShowCompanyModal] = useState(false);
@@ -27,6 +28,14 @@ export function OrganizationSettings() {
     const [branchForm, setBranchForm] = useState({
         company_id: 0, name: '', address: '', phone: '', email: '', manager_name: '', is_main: false
     });
+
+    // ── Logo Upload State ────────────────────────────────────────────────────
+    const [logoCompany, setLogoCompany] = useState<Company | null>(null);
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
         fetchData();
@@ -139,11 +148,60 @@ export function OrganizationSettings() {
         }
     };
 
+    // ── Logo Upload Handlers ─────────────────────────────────────────────────
+    const openLogoUpload = (company: Company) => {
+        setLogoCompany(company);
+        setLogoFile(null);
+        setLogoPreview(company.logo_url ? `/api/v1${company.logo_url}` : null);
+        setIsDragging(false);
+    };
+
+    const handleFileSelect = (file: File) => {
+        if (!file.type.startsWith('image/')) {
+            setError('Please select an image file (PNG, JPG, SVG, etc.)');
+            return;
+        }
+        setLogoFile(file);
+        setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        const file = e.dataTransfer.files[0];
+        if (file) handleFileSelect(file);
+    };
+
+    const handleLogoUpload = async () => {
+        if (!logoFile || !logoCompany) return;
+        setUploading(true);
+        setError('');
+        try {
+            const result = await uploadCompanyLogo(logoCompany.id, logoFile);
+            // Update the company in local state immediately
+            setCompanies(prev => prev.map(c =>
+                c.id === logoCompany.id ? { ...c, logo_url: result.logo_url } : c
+            ));
+            setSuccess(`Logo uploaded successfully for ${logoCompany.name}!`);
+            setLogoCompany(null);
+            setLogoFile(null);
+            setLogoPreview(null);
+        } catch (err: any) {
+            setError(err?.response?.data?.detail || 'Failed to upload logo');
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const logoUrl = (company: Company) =>
+        company.logo_url ? `/api/v1${company.logo_url}` : null;
+
     return (
         <Container className="py-4">
             <h2 className="mb-4">Organization Settings</h2>
 
             {error && <Alert variant="danger" onClose={() => setError('')} dismissible>{error}</Alert>}
+            {success && <Alert variant="success" onClose={() => setSuccess('')} dismissible>{success}</Alert>}
 
             <Tabs activeKey={activeTab} onSelect={(k) => setActiveTab(k || 'company')} className="mb-4">
                 <Tab eventKey="company" title="Company Details">
@@ -158,6 +216,7 @@ export function OrganizationSettings() {
                             <Table responsive hover>
                                 <thead>
                                     <tr>
+                                        <th style={{ width: 72 }}>Logo</th>
                                         <th>Name</th>
                                         <th>Tax ID</th>
                                         <th>Contact</th>
@@ -168,24 +227,66 @@ export function OrganizationSettings() {
                                 <tbody>
                                     {companies.map(company => (
                                         <tr key={company.id}>
-                                            <td className="fw-bold">{company.name}</td>
-                                            <td>{company.tax_id || '-'}</td>
                                             <td>
+                                                <div
+                                                    style={{
+                                                        width: 52, height: 52, borderRadius: 8,
+                                                        overflow: 'hidden', border: '1px solid #dee2e6',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        background: '#f8f9fa', cursor: 'pointer',
+                                                        position: 'relative'
+                                                    }}
+                                                    title="Click to upload logo"
+                                                    onClick={() => openLogoUpload(company)}
+                                                >
+                                                    {logoUrl(company) ? (
+                                                        <img
+                                                            src={logoUrl(company)!}
+                                                            alt="logo"
+                                                            style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                                            onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
+                                                        />
+                                                    ) : (
+                                                        <div style={{ textAlign: 'center', color: '#adb5bd' }}>
+                                                            <ImageIcon size={20} />
+                                                            <div style={{ fontSize: 9, marginTop: 2 }}>Upload</div>
+                                                        </div>
+                                                    )}
+                                                    {/* Hover overlay */}
+                                                    <div style={{
+                                                        position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)',
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        opacity: 0, transition: 'opacity 0.2s',
+                                                        borderRadius: 8
+                                                    }}
+                                                        onMouseEnter={e => (e.currentTarget.style.opacity = '1')}
+                                                        onMouseLeave={e => (e.currentTarget.style.opacity = '0')}
+                                                    >
+                                                        <Upload size={16} color="white" />
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="fw-bold align-middle">{company.name}</td>
+                                            <td className="align-middle">{company.tax_id || '-'}</td>
+                                            <td className="align-middle">
                                                 <div className="small text-muted">
                                                     {company.phone && <div><PhoneIcon size={12} className="me-1" />{company.phone}</div>}
                                                     {company.email && <div><Mail size={12} className="me-1" />{company.email}</div>}
                                                 </div>
                                             </td>
-                                            <td className="small">{company.address}</td>
-                                            <td>
-                                                <Button variant="outline-primary" size="sm" onClick={() => handleCompanyModal(company)}>
+                                            <td className="small align-middle">{company.address}</td>
+                                            <td className="align-middle">
+                                                <Button variant="outline-primary" size="sm" className="me-1" onClick={() => handleCompanyModal(company)}>
                                                     <Edit2 size={14} />
+                                                </Button>
+                                                <Button variant="outline-secondary" size="sm" title="Upload Logo" onClick={() => openLogoUpload(company)}>
+                                                    <Upload size={14} />
                                                 </Button>
                                             </td>
                                         </tr>
                                     ))}
                                     {companies.length === 0 && !loading && (
-                                        <tr><td colSpan={5} className="text-center py-4 muted">No companies found. Add one to get started.</td></tr>
+                                        <tr><td colSpan={6} className="text-center py-4 muted">No companies found. Add one to get started.</td></tr>
                                     )}
                                 </tbody>
                             </Table>
@@ -246,7 +347,7 @@ export function OrganizationSettings() {
                 </Tab>
             </Tabs>
 
-            {/* Company Modal */}
+            {/* ── Company Modal ─────────────────────────────────────────────────── */}
             <Modal show={showCompanyModal} onHide={() => setShowCompanyModal(false)}>
                 <Form onSubmit={handleCompanySubmit}>
                     <Modal.Header closeButton>
@@ -321,7 +422,7 @@ export function OrganizationSettings() {
                 </Form>
             </Modal>
 
-            {/* Branch Modal */}
+            {/* ── Branch Modal ──────────────────────────────────────────────────── */}
             <Modal show={showBranchModal} onHide={() => setShowBranchModal(false)}>
                 <Form onSubmit={handleBranchSubmit}>
                     <Modal.Header closeButton>
@@ -378,6 +479,110 @@ export function OrganizationSettings() {
                         <Button variant="primary" type="submit">Save Branch</Button>
                     </Modal.Footer>
                 </Form>
+            </Modal>
+
+            {/* ── Logo Upload Modal ─────────────────────────────────────────────── */}
+            <Modal show={!!logoCompany} onHide={() => { setLogoCompany(null); setLogoFile(null); setLogoPreview(null); }} centered>
+                <Modal.Header closeButton>
+                    <Modal.Title className="d-flex align-items-center gap-2">
+                        <Upload size={20} />
+                        Upload Company Logo
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    {logoCompany && (
+                        <>
+                            <p className="text-muted mb-3">
+                                Uploading logo for <strong>{logoCompany.name}</strong>.
+                                Recommended: transparent PNG or SVG, min 200×200 px, max 5 MB.
+                            </p>
+
+                            {/* Current logo preview */}
+                            {logoPreview && (
+                                <div className="text-center mb-3">
+                                    <div style={{
+                                        display: 'inline-block', padding: 8, borderRadius: 12,
+                                        border: '1px solid #dee2e6', background: '#f8f9fa', position: 'relative'
+                                    }}>
+                                        <img
+                                            src={logoPreview}
+                                            alt="Preview"
+                                            style={{ maxWidth: 180, maxHeight: 180, objectFit: 'contain', borderRadius: 8 }}
+                                        />
+                                        {logoFile && (
+                                            <button
+                                                style={{
+                                                    position: 'absolute', top: -10, right: -10,
+                                                    background: '#dc3545', border: 'none', borderRadius: '50%',
+                                                    width: 24, height: 24, display: 'flex', alignItems: 'center',
+                                                    justifyContent: 'center', cursor: 'pointer', color: 'white'
+                                                }}
+                                                onClick={() => { setLogoFile(null); setLogoPreview(logoCompany.logo_url ? `/api/v1${logoCompany.logo_url}` : null); }}
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    {logoFile && (
+                                        <div className="mt-2 small text-success d-flex align-items-center justify-content-center gap-1">
+                                            <CheckCircle size={14} /> {logoFile.name} ({(logoFile.size / 1024).toFixed(1)} KB)
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Drop Zone */}
+                            <div
+                                style={{
+                                    border: `2px dashed ${isDragging ? '#0d6efd' : '#ced4da'}`,
+                                    borderRadius: 12, padding: '32px 24px', textAlign: 'center',
+                                    background: isDragging ? '#f0f6ff' : '#fafafa',
+                                    cursor: 'pointer', transition: 'all 0.2s'
+                                }}
+                                onDragOver={e => { e.preventDefault(); setIsDragging(true); }}
+                                onDragLeave={() => setIsDragging(false)}
+                                onDrop={handleDrop}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                <Upload size={32} color={isDragging ? '#0d6efd' : '#adb5bd'} style={{ marginBottom: 8 }} />
+                                <div className="fw-semibold" style={{ color: isDragging ? '#0d6efd' : '#495057' }}>
+                                    {isDragging ? 'Drop it here!' : 'Drag & drop your logo here'}
+                                </div>
+                                <div className="text-muted small mt-1">or click to browse files</div>
+                                <div className="text-muted" style={{ fontSize: 11, marginTop: 8 }}>PNG, JPG, SVG, WebP — up to 5 MB</div>
+                            </div>
+
+                            {/* Hidden file input */}
+                            <input
+                                ref={fileInputRef}
+                                type="file"
+                                accept="image/*"
+                                hidden
+                                onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (file) handleFileSelect(file);
+                                    e.target.value = '';
+                                }}
+                            />
+                        </>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => { setLogoCompany(null); setLogoFile(null); setLogoPreview(null); }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="primary"
+                        onClick={handleLogoUpload}
+                        disabled={!logoFile || uploading}
+                    >
+                        {uploading ? (
+                            <><Spinner size="sm" className="me-2" />Uploading…</>
+                        ) : (
+                            <><Upload size={16} className="me-1" />Upload Logo</>
+                        )}
+                    </Button>
+                </Modal.Footer>
             </Modal>
         </Container>
     );

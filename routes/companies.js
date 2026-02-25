@@ -1,8 +1,31 @@
 const express = require('express');
 const router = express.Router();
+const path = require('path');
+const fs = require('fs');
+const multer = require('multer');
 const Company = require('../models/Company');
 const Branch = require('../models/Branch');
 const { authenticate } = require('../middleware/auth');
+
+// Set up multer for logo uploads → stored in public/logos/
+const logosDir = path.join(__dirname, '..', 'public', 'logos');
+if (!fs.existsSync(logosDir)) fs.mkdirSync(logosDir, { recursive: true });
+
+const logoStorage = multer.diskStorage({
+    destination: (req, file, cb) => cb(null, logosDir),
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, `company_${req.params.id}_${Date.now()}${ext}`);
+    }
+});
+const logoUpload = multer({
+    storage: logoStorage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+    fileFilter: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Only image files are allowed'));
+    }
+});
 
 // --- Company Management ---
 
@@ -110,4 +133,29 @@ router.delete("/branches/:id", authenticate, async (req, res) => {
     }
 });
 
+// --- Logo Upload ---
+router.post("/companies/:id/logo", authenticate, logoUpload.single('logo'), async (req, res) => {
+    try {
+        if (!req.user.is_superuser && req.user.role !== 'admin') {
+            return res.status(403).json({ detail: "Not enough permissions" });
+        }
+        if (!req.file) {
+            return res.status(400).json({ detail: "No file uploaded" });
+        }
+
+        const { id } = req.params;
+        const logoUrl = `/logos/${req.file.filename}`;
+
+        const [updated] = await Company.update({ logo_url: logoUrl }, { where: { id } });
+        if (!updated) return res.status(404).json({ detail: "Company not found" });
+
+        const updatedCompany = await Company.findByPk(id);
+        res.json({ logo_url: updatedCompany.logo_url, company: updatedCompany });
+    } catch (error) {
+        console.error("Logo upload error:", error);
+        res.status(500).json({ detail: error.message || "Failed to upload logo" });
+    }
+});
+
 module.exports = router;
+
