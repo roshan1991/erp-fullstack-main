@@ -147,6 +147,16 @@ class PosProvider with ChangeNotifier {
     return success;
   }
 
+  void addProductByBarcode(String barcode) {
+    if (barcode.trim().isEmpty) return;
+    try {
+      final product = _products.firstWhere((p) => p.sku == barcode.trim() || p.id == barcode.trim());
+      addToCart(product);
+    } catch (e) {
+      // Product not found
+    }
+  }
+
   Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
     final success = await _apiService.updateProduct(id, data);
     if (success) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
 import '../widgets/sidebar.dart';
@@ -16,16 +17,67 @@ class _MainPosScreenState extends State<MainPosScreen> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
 
+  final FocusNode _focusNode = FocusNode();
+  String _barcodeBuffer = '';
+  DateTime? _lastKeyPress;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      FocusScope.of(context).requestFocus(_focusNode);
+    });
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  void _handleKeyEvent(RawKeyEvent event) {
+    if (event is RawKeyDownEvent) {
+      final now = DateTime.now();
+      
+      if (_lastKeyPress != null) {
+        final delta = now.difference(_lastKeyPress!).inMilliseconds;
+        // If an operator is typing manually, they are slower than 50ms per character
+        if (delta > 100) {
+          _barcodeBuffer = '';
+        }
+      }
+      _lastKeyPress = now;
+
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        if (_barcodeBuffer.isNotEmpty) {
+          // Barcode scan finished! Add product
+          Provider.of<PosProvider>(context, listen: false).addProductByBarcode(_barcodeBuffer.trim());
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Scanned barcode'), duration: Duration(milliseconds: 500)),
+          );
+          
+          _barcodeBuffer = '';
+        }
+      } else {
+        // Collect characters
+        final char = event.character;
+        if (char != null && char.isNotEmpty) {
+          _barcodeBuffer += char;
+        }
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Row(
+    return RawKeyboardListener(
+      focusNode: _focusNode,
+      autofocus: true,
+      onKey: _handleKeyEvent,
+      child: Scaffold(
+        body: Row(
         children: [
           const Sidebar(),
           Expanded(
@@ -46,7 +98,7 @@ class _MainPosScreenState extends State<MainPosScreen> {
           const CartPanel(),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildHeader(BuildContext context) {
