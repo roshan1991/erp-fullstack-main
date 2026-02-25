@@ -27,6 +27,9 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpecs));
 // Serve uploaded logos publicly at /api/v1/logos/
 app.use("/api/v1/logos", express.static(path.join(__dirname, "public", "logos")));
 
+// Serve general uploads (like products) publicly at /api/v1/uploads/
+app.use("/api/v1/uploads", express.static(path.join(__dirname, "public", "uploads")));
+
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, "client", "dist")));
 

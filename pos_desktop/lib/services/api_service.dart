@@ -122,13 +122,54 @@ class ApiService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/products'),
-        headers: _authHeaders,
+        headers: {..._authHeaders, 'Content-Type': 'application/json'},
         body: jsonEncode(productData),
       );
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       lastError = 'Create product failed: $e';
       return false;
+    }
+  }
+
+  Future<bool> updateProduct(String id, Map<String, dynamic> productData) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/products/$id'),
+        headers: {..._authHeaders, 'Content-Type': 'application/json'},
+        body: jsonEncode(productData),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      lastError = 'Update product failed: $e';
+      return false;
+    }
+  }
+
+  Future<String?> uploadProductImage(String filePath) async {
+    try {
+      final request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/products/upload'),
+      );
+      if (_token != null) {
+        request.headers['Authorization'] = 'Bearer $_token';
+      }
+      request.files.add(await http.MultipartFile.fromPath('image', filePath));
+
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return data['image_url'];
+      } else {
+        lastError = 'Upload failed (${response.statusCode})';
+        return null;
+      }
+    } catch (e) {
+      lastError = 'Upload error: $e';
+      return null;
     }
   }
 
@@ -220,6 +261,20 @@ class ApiService {
       return response.statusCode == 200 || response.statusCode == 201;
     } catch (e) {
       print('Create supplier failed: $e');
+      return false;
+    }
+  }
+
+  Future<bool> updateSupplier(String id, Map<String, dynamic> supplierData) async {
+    try {
+      final response = await http.put(
+        Uri.parse('$baseUrl/supply-chain/suppliers/$id'),
+        headers: {..._authHeaders, 'Content-Type': 'application/json'},
+        body: jsonEncode(supplierData),
+      );
+      return response.statusCode == 200;
+    } catch (e) {
+      print('Update supplier failed: $e');
       return false;
     }
   }

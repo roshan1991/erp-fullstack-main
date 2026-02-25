@@ -19,7 +19,7 @@ class Supplier {
     return Supplier(
       id: json['id']?.toString() ?? json['_id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Unknown',
-      contactName: json['contact_name']?.toString() ?? json['contactName']?.toString() ?? '',
+      contactName: json['contact_person']?.toString() ?? json['contactName']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       phone: json['phone']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
@@ -28,7 +28,7 @@ class Supplier {
 
   Map<String, dynamic> toJson() => {
     'name': name,
-    'contact_name': contactName,
+    'contact_person': contactName,
     'email': email,
     'phone': phone,
     'address': address,

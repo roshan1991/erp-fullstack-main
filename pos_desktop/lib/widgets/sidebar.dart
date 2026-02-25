@@ -4,6 +4,9 @@ import '../screens/main_pos_screen.dart';
 import '../screens/promos_screen.dart';
 import '../screens/settings_screen.dart';
 import '../screens/suppliers_screen.dart';
+import '../screens/products_screen.dart';
+import 'package:provider/provider.dart';
+import '../providers/pos_provider.dart';
 
 class Sidebar extends StatelessWidget {
   final String activePage;
@@ -12,6 +15,8 @@ class Sidebar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final provider = Provider.of<PosProvider>(context);
+
     return Container(
       width: 100,
       color: const Color(0xFF1A1A28),
@@ -87,6 +92,22 @@ class Sidebar extends StatelessWidget {
               }
             },
           ),
+          if (provider.isAdmin) ...[
+            const SizedBox(height: 32),
+            _buildMenuItem(
+              context: context,
+              icon: Icons.inventory,
+              label: 'Products',
+              isActive: activePage == 'Products',
+              onTap: () {
+                if (activePage != 'Products') {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(builder: (_) => const ProductsScreen()),
+                  );
+                }
+              },
+            ),
+          ],
           const SizedBox(height: 32),
           _buildMenuItem(
             context: context,

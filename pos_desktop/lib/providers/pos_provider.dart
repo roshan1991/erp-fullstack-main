@@ -147,6 +147,18 @@ class PosProvider with ChangeNotifier {
     return success;
   }
 
+  Future<bool> updateProduct(String id, Map<String, dynamic> data) async {
+    final success = await _apiService.updateProduct(id, data);
+    if (success) {
+      await fetchProducts();
+    }
+    return success;
+  }
+
+  Future<String?> uploadProductImage(String filePath) async {
+    return await _apiService.uploadProductImage(filePath);
+  }
+
   Future<void> fetchPromos() async {
     _promos = await _apiService.fetchPromos();
     _promoError = _promos.isEmpty ? _apiService.lastError : null;
@@ -166,6 +178,14 @@ class PosProvider with ChangeNotifier {
 
   Future<bool> createSupplier(Map<String, dynamic> data) async {
     final success = await _apiService.createSupplier(data);
+    if (success) {
+      await fetchSuppliers();
+    }
+    return success;
+  }
+
+  Future<bool> updateSupplier(String id, Map<String, dynamic> data) async {
+    final success = await _apiService.updateSupplier(id, data);
     if (success) {
       await fetchSuppliers();
     }

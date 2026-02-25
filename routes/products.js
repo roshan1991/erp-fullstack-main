@@ -3,6 +3,27 @@ const router = express.Router();
 const Product = require('../models/Product');
 const { authenticate } = require('../middleware/auth');
 const { Op } = require('sequelize');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, '../public/uploads');
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Set up multer for product image uploads
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, uploadDir);
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, 'product-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+const upload = multer({ storage: storage });
 
 // --- GET all products ---
 router.get("/", authenticate, async (req, res) => {
@@ -64,6 +85,20 @@ router.post("/", authenticate, async (req, res) => {
             return res.status(400).json({ detail: "SKU already exists" });
         }
         res.status(500).json({ detail: error.message || "Failed to create product" });
+    }
+});
+
+// --- POST upload image ---
+router.post("/upload", authenticate, upload.single('image'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ detail: "No image file provided" });
+        }
+        // Return the virtual URL to the uploaded file
+        res.json({ image_url: `/api/v1/uploads/${req.file.filename}` });
+    } catch (error) {
+        console.error("Upload image error:", error);
+        res.status(500).json({ detail: "Failed to upload image" });
     }
 });
 
