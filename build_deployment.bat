@@ -44,6 +44,7 @@ mkdir "deployment"
 REM Copy Backend Files
 copy "server.js" "deployment\"
 copy "package.json" "deployment\"
+if exist "package-lock.json" copy "package-lock.json" "deployment\"
 if exist ".env" copy ".env" "deployment\.env.example"
 xcopy "config" "deployment\config\" /E /I
 xcopy "models" "deployment\models\" /E /I
@@ -51,6 +52,8 @@ xcopy "routes" "deployment\routes\" /E /I
 xcopy "middleware" "deployment\middleware\" /E /I
 xcopy "scripts" "deployment\scripts\" /E /I
 xcopy "sockets" "deployment\sockets\" /E /I
+xcopy "whatsapp" "deployment\whatsapp\" /E /I
+xcopy "public" "deployment\public\" /E /I
 
 REM Copy Admin Creation Script specifically if not in scripts
 if exist "create_admin.js" copy "create_admin.js" "deployment\"
