@@ -32,8 +32,16 @@ class ShortcutWrapper extends StatelessWidget {
 
           if (requiresCtrl != event.isControlPressed) return false;
 
-          final mainKey = _parseKey(mainKeyStr);
-          return event.logicalKey == mainKey;
+          final mainKeys = _parseKeys(mainKeyStr);
+          if (mainKeys.contains(event.logicalKey)) return true;
+
+          final label = event.logicalKey.keyLabel?.toUpperCase();
+          if (label != null && label.isNotEmpty && label == mainKeyStr) return true;
+          
+          final char = event.character?.toUpperCase();
+          if (char != null && char.isNotEmpty && char == mainKeyStr) return true;
+
+          return false;
         }
 
         final shortcuts = provider.customShortcuts;
@@ -79,37 +87,37 @@ class ShortcutWrapper extends StatelessWidget {
     );
   }
 
-  LogicalKeyboardKey? _parseKey(String name) {
+  Set<LogicalKeyboardKey> _parseKeys(String name) {
     if (name.length == 1) {
       final code = name.codeUnitAt(0);
       switch (name) {
-        case '1': return LogicalKeyboardKey.digit1;
-        case '2': return LogicalKeyboardKey.digit2;
-        case '3': return LogicalKeyboardKey.digit3;
-        case '4': return LogicalKeyboardKey.digit4;
-        case '5': return LogicalKeyboardKey.digit5;
-        case '6': return LogicalKeyboardKey.digit6;
-        case '7': return LogicalKeyboardKey.digit7;
-        case '8': return LogicalKeyboardKey.digit8;
-        case '9': return LogicalKeyboardKey.digit9;
-        case '0': return LogicalKeyboardKey.digit0;
-        case '`': return LogicalKeyboardKey.backquote;
+        case '1': return {LogicalKeyboardKey.digit1, LogicalKeyboardKey.numpad1};
+        case '2': return {LogicalKeyboardKey.digit2, LogicalKeyboardKey.numpad2};
+        case '3': return {LogicalKeyboardKey.digit3, LogicalKeyboardKey.numpad3};
+        case '4': return {LogicalKeyboardKey.digit4, LogicalKeyboardKey.numpad4};
+        case '5': return {LogicalKeyboardKey.digit5, LogicalKeyboardKey.numpad5};
+        case '6': return {LogicalKeyboardKey.digit6, LogicalKeyboardKey.numpad6};
+        case '7': return {LogicalKeyboardKey.digit7, LogicalKeyboardKey.numpad7};
+        case '8': return {LogicalKeyboardKey.digit8, LogicalKeyboardKey.numpad8};
+        case '9': return {LogicalKeyboardKey.digit9, LogicalKeyboardKey.numpad9};
+        case '0': return {LogicalKeyboardKey.digit0, LogicalKeyboardKey.numpad0};
+        case '`': return {LogicalKeyboardKey.backquote};
       }
       if (code >= 65 && code <= 90) { // A-Z
-        return LogicalKeyboardKey(code + 32); // Lowercase match
+        return {LogicalKeyboardKey(code + 32)}; // Lowercase match
       }
     }
     if (name.startsWith('F') && name.length <= 3) {
       final num = int.tryParse(name.substring(1));
       if (num != null && num >= 1 && num <= 12) {
-        return LogicalKeyboardKey(LogicalKeyboardKey.f1.keyId + (num - 1));
+        return {LogicalKeyboardKey(LogicalKeyboardKey.f1.keyId + (num - 1))};
       }
     }
-    if (name == 'ESCAPE' || name == 'ESC') return LogicalKeyboardKey.escape;
-    if (name == 'ENTER') return LogicalKeyboardKey.enter;
-    if (name == 'SPACE') return LogicalKeyboardKey.space;
-    if (name == 'BACKSPACE') return LogicalKeyboardKey.backspace;
-    return null;
+    if (name == 'ESCAPE' || name == 'ESC') return {LogicalKeyboardKey.escape};
+    if (name == 'ENTER') return {LogicalKeyboardKey.enter, LogicalKeyboardKey.numpadEnter};
+    if (name == 'SPACE') return {LogicalKeyboardKey.space};
+    if (name == 'BACKSPACE') return {LogicalKeyboardKey.backspace};
+    return {};
   }
 
   void _navigate(BuildContext context, Widget screen) {

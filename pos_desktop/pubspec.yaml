@@ -21,6 +21,7 @@ dependencies:
   pdf: ^3.11.3
   printing: ^5.14.2
   serial_port_win32: ^2.3.0
+  window_manager: ^0.5.1
 
 dev_dependencies:
   flutter_test:
@@ -29,3 +30,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+      - assets/image/logo.png
+    

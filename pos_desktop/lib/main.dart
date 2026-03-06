@@ -6,10 +6,26 @@ import 'screens/login_screen.dart';
 import 'widgets/shortcut_wrapper.dart';
 
 import 'services/api_service.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:window_manager/window_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiService().loadConfig();
+
+  if (!kIsWeb) {
+    await windowManager.ensureInitialized();
+    WindowOptions windowOptions = const WindowOptions(
+      center: true,
+      backgroundColor: Colors.transparent,
+      skipTaskbar: false,
+      titleBarStyle: TitleBarStyle.normal,
+    );
+    windowManager.waitUntilReadyToShow(windowOptions, () async {
+      await windowManager.show();
+      await windowManager.focus();
+    });
+  }
 
   runApp(
     MultiProvider(
