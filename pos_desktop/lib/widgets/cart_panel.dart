@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../providers/pos_provider.dart';
 import '../models/order.dart';
+import '../services/receipt_service.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({Key? key}) : super(key: key);
@@ -104,14 +105,27 @@ class _CartPanelState extends State<CartPanel> {
     );
 
     if (selectedMethod != null) {
+      // Create a temporary OrderModel for the preview
+      final tempOrder = OrderModel(
+        id: 'TBD', 
+        items: List.from(provider.cart),
+        subtotal: provider.subtotal,
+        discount: provider.discount,
+        tax: 0,
+        total: provider.total,
+        paymentMethod: selectedMethod,
+        date: DateTime.now(),
+      );
+
+      // Show the print preview before checkout
+      // This allows the user to see what will be printed.
+      await ReceiptService.showPrintPreview(context, tempOrder);
+
       final success = await provider.checkout(selectedMethod);
       if (mounted) {
         setState(() => _promoError = null);
         
         if (success) {
-          final lastOrder = provider.orderHistory.first;
-          await _showReceiptPreview(context, lastOrder);
-          
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text('✅ Order placed successfully ($selectedMethod)!'),
             backgroundColor: Colors.green,
@@ -126,102 +140,7 @@ class _CartPanelState extends State<CartPanel> {
     }
   }
 
-  Future<void> _showReceiptPreview(BuildContext context, OrderModel order) async {
-    final doc = pw.Document();
-    final dateStr = DateFormat('yyyy-MM-dd HH:mm').format(order.date);
 
-    // Load logo
-    final logoImage = pw.MemoryImage(
-      (await rootBundle.load('assets/image/ahu_logo.png')).buffer.asUint8List(),
-    );
-
-    doc.addPage(
-      pw.Page(
-        pageFormat: PdfPageFormat.roll80,
-        margin: const pw.EdgeInsets.all(10),
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Center(
-                child: pw.Image(logoImage, width: 60, height: 60),
-              ),
-              pw.SizedBox(height: 5),
-              pw.Center(child: pw.Text('427A/1 Main Street, Maruthamunai, Srilanka', style: const pw.TextStyle(fontSize: 8))),
-              pw.Center(child: pw.Text('+94 72 464 4200', style: const pw.TextStyle(fontSize: 8))),
-              pw.SizedBox(height: 5),
-              pw.Text('Date: $dateStr', style: const pw.TextStyle(fontSize: 8)),
-              pw.Text('Order ID: #${order.id}', style: const pw.TextStyle(fontSize: 8)),
-              pw.SizedBox(height: 5),
-              pw.Divider(thickness: 0.5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Item', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                  pw.Text('Total', style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-              pw.Divider(thickness: 0.5),
-              ...order.items.map((item) {
-                return pw.Padding(
-                  padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Row(
-                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                    children: [
-                      pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Text(item.product.name, style: const pw.TextStyle(fontSize: 9)),
-                          pw.Text('${item.quantity} x LKR ${item.product.price.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 7)),
-                          if (item.product.size != null && item.product.size != 'null')
-                             pw.Text('Size: ${item.product.size}', style: const pw.TextStyle(fontSize: 7)),
-                        ],
-                      ),
-                      pw.Text('LKR ${item.totalPrice.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
-                    ],
-                  ),
-                );
-              }).toList(),
-              pw.Divider(thickness: 0.5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Subtotal:', style: const pw.TextStyle(fontSize: 9)),
-                  pw.Text('LKR ${order.subtotal.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9)),
-                ],
-              ),
-              if (order.discount > 0)
-                pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text('Discount:', style: const pw.TextStyle(fontSize: 9, color: PdfColors.red)),
-                    pw.Text('-LKR ${order.discount.toStringAsFixed(2)}', style: const pw.TextStyle(fontSize: 9, color: PdfColors.red)),
-                  ],
-                ),
-              pw.Divider(thickness: 0.5),
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text('Total:', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                  pw.Text('LKR ${order.total.toStringAsFixed(2)}', style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold)),
-                ],
-              ),
-              pw.SizedBox(height: 5),
-              pw.Text('Payment Method: ${order.paymentMethod}', style: const pw.TextStyle(fontSize: 8)),
-              pw.SizedBox(height: 10),
-              pw.Center(child: pw.Text('Returns within 14 days with receipt', style: const pw.TextStyle(fontSize: 7, fontStyle: pw.FontStyle.italic))),
-              pw.Center(child: pw.Text('Thank you for shopping at Ahu wears!', style: const pw.TextStyle(fontSize: 8))),
-            ],
-          );
-        },
-      ),
-    );
-
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Order_${order.id}.pdf'
-    );
-  }
 
   @override
   Widget build(BuildContext context) {

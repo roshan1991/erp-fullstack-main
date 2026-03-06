@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
+import '../services/receipt_service.dart';
+import '../models/order.dart';
 
 class CartPanel extends StatefulWidget {
   const CartPanel({Key? key}) : super(key: key);
@@ -74,6 +76,21 @@ class _CartPanelState extends State<CartPanel> {
     );
 
     if (selectedMethod != null) {
+      // Create a temporary OrderModel for the preview
+      final tempOrder = OrderModel(
+        id: 'TBD', // Order ID will be assigned by server
+        items: List.from(provider.cart),
+        subtotal: provider.subtotal,
+        discount: provider.discount,
+        tax: 0,
+        total: provider.total,
+        paymentMethod: selectedMethod,
+        date: DateTime.now(),
+      );
+
+      // Show the print preview
+      await ReceiptService.showPrintPreview(context, tempOrder);
+
       final success = await provider.checkout(selectedMethod);
       if (mounted) {
         setState(() => _promoError = null);
@@ -85,9 +102,9 @@ class _CartPanelState extends State<CartPanel> {
         ));
         
         if (success) {
-          // Mock print action
+          // Success message
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('🖨️ Printing receipt...'),
+            content: Text('🖨️ Receipt process completed.'),
             duration: Duration(seconds: 1),
           ));
         }
