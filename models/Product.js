@@ -74,7 +74,8 @@ const Product = sequelize.define('Product', {
     }
 }, {
     tableName: 'inventory_products',
-    timestamps: true
+    timestamps: true,
+    paranoid: true
 });
 
 // Setup relationships

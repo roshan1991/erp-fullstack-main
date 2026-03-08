@@ -140,6 +140,14 @@ router.delete("/:id", authenticate, async (req, res) => {
     try {
         const product = await Product.findByPk(req.params.id);
         if (!product) return res.status(404).json({ detail: "Product not found" });
+        
+        // Append a deleted marker to the SKU to free it up for reuse
+        const deletedSku = `${product.sku}-deleted-${Date.now()}`;
+        await product.update({ 
+            sku: deletedSku,
+            woocommerce_product_id: null 
+        });
+        
         await product.destroy();
 
         const io = req.app.get('io');
@@ -148,6 +156,9 @@ router.delete("/:id", authenticate, async (req, res) => {
         res.json({ message: "Product deleted successfully" });
     } catch (error) {
         console.error("Delete product error:", error);
+        if (error.name === 'SequelizeForeignKeyConstraintError') {
+            return res.status(400).json({ detail: "Cannot delete product because it is being used in an existing order or system record." });
+        }
         res.status(500).json({ detail: "Failed to delete product" });
     }
 });

@@ -482,7 +482,10 @@ class PosProvider with ChangeNotifier {
 
   Future<bool> deleteProduct(String id) async {
     final success = await _apiService.deleteProduct(id);
-    if (success) {
+    if (!success) {
+      _productError = _apiService.lastError;
+      notifyListeners();
+    } else {
       await fetchProducts();
     }
     return success;

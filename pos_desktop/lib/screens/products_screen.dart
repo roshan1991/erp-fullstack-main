@@ -59,7 +59,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
               if (mounted) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
-                    content: Text(success ? 'Product deleted' : 'Failed to delete product'),
+                    content: Text(success ? 'Product deleted' : 'Failed to delete product: ${provider.productError ?? 'Unknown error'}'),
                     backgroundColor: success ? Colors.green : Colors.red,
                   )
                 );
@@ -115,12 +115,21 @@ class _ProductsScreenState extends State<ProductsScreen> {
                                               TextButton(
                                                 onPressed: () async {
                                                   Navigator.pop(ctx);
+                                                  int successCount = 0;
+                                                  int failCount = 0;
                                                   for (final id in _selectedProductIds) {
-                                                    await provider.deleteProduct(id);
+                                                    final success = await provider.deleteProduct(id);
+                                                    if (success) successCount++;
+                                                    else failCount++;
                                                   }
                                                   if (mounted) {
                                                     setState(() => _selectedProductIds.clear());
-                                                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Selected products deleted'), backgroundColor: Colors.green));
+                                                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                      content: Text(failCount == 0 
+                                                        ? 'Selected products deleted' 
+                                                        : 'Deleted $successCount. Failed $failCount. ${provider.productError ?? ''}'), 
+                                                      backgroundColor: failCount == 0 ? Colors.green : Colors.orange
+                                                    ));
                                                   }
                                                 },
                                                 child: const Text('Delete', style: TextStyle(color: Colors.red)),

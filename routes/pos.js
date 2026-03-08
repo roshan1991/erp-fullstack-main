@@ -159,7 +159,7 @@ router.get("/orders", authenticate, async (req, res) => {
             include: [
                 {
                     model: OrderItem,
-                    include: [Product]
+                    include: [{ model: Product, paranoid: false }]
                 },
                 {
                     model: Customer
@@ -227,7 +227,7 @@ router.get("/orders/:id", authenticate, async (req, res) => {
         const id = parseInt(req.params.id);
         const order = await Order.findByPk(id, {
             include: [
-                { model: OrderItem, include: [Product] }, // Include Product details in items if needed
+                { model: OrderItem, include: [{ model: Product, paranoid: false }] }, // Include Product details in items if needed
                 { model: Customer }
             ]
         });

@@ -414,12 +414,23 @@ class ApiService {
   }
 
   Future<bool> deleteProduct(String id) async {
+    lastError = null;
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/products/$id'),
         headers: _authHeaders,
       );
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        try {
+          final decoded = json.decode(response.body);
+          lastError = decoded['detail'] ?? 'Delete failed (${response.statusCode})';
+        } catch (_) {
+          lastError = 'Delete failed (${response.statusCode})';
+        }
+        return false;
+      }
     } catch (e) {
       lastError = 'Delete product failed: $e';
       return false;
@@ -427,14 +438,25 @@ class ApiService {
   }
 
   Future<bool> deleteSupplier(String id) async {
+    lastError = null;
     try {
       final response = await http.delete(
         Uri.parse('$baseUrl/supply-chain/suppliers/$id'),
         headers: _authHeaders,
       );
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        return true;
+      } else {
+        try {
+          final decoded = json.decode(response.body);
+          lastError = decoded['detail'] ?? 'Delete failed (${response.statusCode})';
+        } catch (_) {
+          lastError = 'Delete failed (${response.statusCode})';
+        }
+        return false;
+      }
     } catch (e) {
-      print('Delete supplier failed: $e');
+      lastError = 'Delete supplier failed: $e';
       return false;
     }
   }
