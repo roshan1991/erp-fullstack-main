@@ -6,11 +6,12 @@ import '../models/order.dart';
 import '../models/supplier.dart';
 import '../services/api_service.dart';
 // import 'package:serial_port_win32/serial_port_win32.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, debugPrint;
 import 'dart:typed_data';
 
 class PosProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
+  ApiService get apiService => _apiService;
 
   VoidCallback? onCheckoutTrigger;
   VoidCallback? onApplyTrigger;
@@ -30,6 +31,15 @@ class PosProvider with ChangeNotifier {
 
   List<Supplier> _suppliers = [];
   List<Supplier> get suppliers => _suppliers;
+
+  // Accounts Module State
+  Map<String, dynamic>? _dailySummary;
+  Map<String, dynamic>? _monthlyReport;
+  List<dynamic> _expenseCategories = [];
+
+  Map<String, dynamic>? get dailySummary => _dailySummary;
+  Map<String, dynamic>? get monthlyReport => _monthlyReport;
+  List<dynamic> get expenseCategories => _expenseCategories;
 
   // Settings
   bool _useOnScreenKeyboard = false;
@@ -251,6 +261,7 @@ class PosProvider with ChangeNotifier {
       await fetchPromos();
       await fetchOrderHistory();
       await fetchSuppliers();
+      await fetchExpenseCategories();
     }
     notifyListeners();
     return success;
@@ -469,12 +480,16 @@ class PosProvider with ChangeNotifier {
 
   Future<bool> checkout(String paymentMethod) async {
     if (_cart.isEmpty) return false;
-    final orderData = _cart.map((item) => {
-      'productId': item.product.id,
-      'quantity': item.quantity,
-      'price': item.totalPrice / item.quantity,   // discounted unit price
-      'originalPrice': item.product.price,         // original unit price for records
-      'itemDiscountPercent': item.itemDiscountPercent,
+    final orderData = _cart.map((item) {
+      debugPrint('🛒 Checkout Item: ${item.product.name} (ID: ${item.product.id})');
+      return {
+        'product_id': item.product.id,
+        'quantity': item.quantity,
+        'price': item.totalPrice / item.quantity,
+        'originalPrice': item.product.price,
+        'itemDiscountPercent': item.itemDiscountPercent,
+        'buying_price': item.product.buyingPrice,
+      };
     }).toList();
     _isLoading = true;
     notifyListeners();
@@ -494,6 +509,51 @@ class PosProvider with ChangeNotifier {
     }
     notifyListeners();
     return success;
+  }
+
+  // --- Accounts Module Methods ---
+
+  Future<void> fetchDailySummary(DateTime date) async {
+    final dateStr = date.toIso8601String().split('T')[0];
+    final result = await _apiService.get('/api/accounts/daily-summary?date=$dateStr');
+    if (result != null) {
+      _dailySummary = result;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchMonthlyReport(int year, int month) async {
+    final result = await _apiService.get('/api/accounts/monthly-report?year=$year&month=$month');
+    if (result != null) {
+      _monthlyReport = result;
+      notifyListeners();
+    }
+  }
+
+  Future<bool> addExpense(Map<String, dynamic> data) async {
+    final result = await _apiService.post('/api/accounts/transactions', data);
+    if (result != null) {
+      await fetchDailySummary(DateTime.now());
+      return true;
+    }
+    return false;
+  }
+
+  Future<bool> deleteTransaction(int id) async {
+    final success = await _apiService.delete('/api/accounts/transactions/$id');
+    if (success) {
+      await fetchDailySummary(DateTime.now());
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> fetchExpenseCategories() async {
+    final result = await _apiService.get('/api/accounts/categories');
+    if (result != null) {
+      _expenseCategories = result;
+      notifyListeners();
+    }
   }
 
   Future<bool> deleteProduct(String id) async {

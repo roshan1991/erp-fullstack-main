@@ -16,7 +16,9 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-// API Routes
+const accountsRoutes = require('./routes/accounts_full');
+app.use('/api/accounts', accountsRoutes);
+
 app.use("/api/v1", apiRoutes);
 
 // Swagger Documentation

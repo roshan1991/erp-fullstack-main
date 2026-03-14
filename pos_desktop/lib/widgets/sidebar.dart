@@ -6,6 +6,7 @@ import '../screens/settings_screen.dart';
 import '../screens/suppliers_screen.dart';
 import '../screens/products_screen.dart';
 import '../screens/barcodes_screen.dart';
+import '../screens/accounts_screen.dart';
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
 import '../utils/fullscreen.dart';
@@ -93,6 +94,14 @@ class Sidebar extends StatelessWidget {
               label: 'Barcodes',
               isActive: activePage == 'Barcodes',
               onTap: () => _navigateTo(context, const BarcodesScreen(), 'Barcodes'),
+            ),
+            const SizedBox(height: 32),
+            _buildMenuItem(
+              context: context,
+              icon: Icons.account_balance,
+              label: 'Accounts',
+              isActive: activePage == 'Accounts',
+              onTap: () => _navigateTo(context, const AccountsScreen(), 'Accounts'),
             ),
           ],
           const SizedBox(height: 32),

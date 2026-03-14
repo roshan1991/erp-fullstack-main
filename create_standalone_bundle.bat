@@ -37,14 +37,20 @@ copy /Y "%~dp0package.json" "%APP_DIR%\backend\"
 copy /Y "%~dp0.env" "%APP_DIR%\backend\"
 copy /Y "%~dp0users.json" "%APP_DIR%\backend\"
 
+echo [3.5/4] Preparing POS Accounts Backend...
+mkdir "%APP_DIR%\accounts_backend"
+xcopy /E /I /Y "%~dp0pos_desktop\server\*" "%APP_DIR%\accounts_backend\"
+
 echo [4/4] Creating Launcher...
 
 :: Create a VBScript to start services silently
 (
 echo Set WshShell = CreateObject^("WScript.Shell"^)
-echo ' Start Backend
+echo ' Start ERP Backend
 echo WshShell.Run "cmd /c cd backend && node server.js", 0, False
-echo ' Wait for server
+echo ' Start POS Accounts Backend
+echo WshShell.Run "cmd /c cd accounts_backend && node server.js", 0, False
+echo ' Wait for servers
 echo WScript.Sleep 5000
 echo ' Start POS App
 echo WshShell.Run "elara_pos.exe", 1, True
@@ -55,6 +61,7 @@ echo WshShell.Run "elara_pos.exe", 1, True
 echo @echo off
 echo echo Starting Elara POS Services...
 echo start /min cmd /c "cd backend && node server.js"
+echo start /min cmd /c "cd accounts_backend && node server.js"
 echo timeout /t 5 /nobreak
 echo start "" "elara_pos.exe"
 ) > "%APP_DIR%\LAUCHER.bat"

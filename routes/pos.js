@@ -139,6 +139,37 @@ router.post("/orders", authenticate, async (req, res) => {
 
         await t.commit();
 
+        // ─── Automated Bookkeeping (Unified SQLite) ──────────────────────────
+        try {
+            const accountsDb = require('../accounts_db');
+            let totalBuyingCost = 0;
+            // Fetch products to get cost_price
+            for (const item of orderData.items) {
+                const prod = await Product.findByPk(item.product_id);
+                if (prod && prod.cost_price) {
+                    totalBuyingCost += (parseFloat(prod.cost_price) * item.quantity);
+                }
+            }
+            const grossProfit = orderData.total_amount - totalBuyingCost;
+
+            accountsDb.prepare(`
+                INSERT INTO accounts_transactions
+                (type, category, description, amount, buying_cost, gross_profit,
+                 payment_method, reference_id, reference_type, date, created_by)
+                VALUES ('income', 'Sales Revenue', ?, ?, ?, ?, ?, ?, 'sale', DATE('now'), 'system')
+            `).run(
+                'Sale ' + newOrder.order_number,
+                orderData.total_amount,
+                totalBuyingCost,
+                grossProfit,
+                orderData.payments && orderData.payments.length > 0 ? orderData.payments[0].method : 'CASH',
+                newOrder.order_number
+            );
+        } catch (accErr) {
+            console.error("Automated Bookkeeping Error:", accErr);
+            // Don't fail the order if bookkeeping fails, but log it
+        }
+
         // Fetch the complete order with items to return
         const createdOrder = await Order.findByPk(newOrder.id, {
             include: [OrderItem]
