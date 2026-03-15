@@ -26,6 +26,11 @@ db.exec(`
     type TEXT NOT NULL CHECK(type IN ('income','expense')),
     is_active INTEGER DEFAULT 1
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `);
 
 try {
@@ -37,6 +42,13 @@ try {
     ('Freight / Delivery','expense'),('Alterations','expense'),
     ('Marketing / Ads','expense'),('Equipment','expense'),
     ('Miscellaneous','expense')`);
-} catch(e) {}
+
+  db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES
+    ('elais_model', 'phi3:mini'),
+    ('elais_enabled', '1'),
+    ('elais_personality', 'You are Elais, a friendly and smart business assistant for a clothing store in Sri Lanka. You speak in clear, simple English. Currency is always LKR. Be concise and practical. Never make up data.')`);
+} catch(e) {
+  console.error("Database initialization error:", e);
+}
 
 module.exports = db;

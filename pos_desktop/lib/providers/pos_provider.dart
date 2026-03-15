@@ -41,6 +41,17 @@ class PosProvider with ChangeNotifier {
   Map<String, dynamic>? get monthlyReport => _monthlyReport;
   List<dynamic> get expenseCategories => _expenseCategories;
 
+  // Elais AI state
+  List<Map<String, dynamic>> _elaisAlerts = [];
+  List<Map<String, String>> _chatHistory = []; // {role: 'user'|'assistant', content: '...'}
+  String? _dailyBrief;
+  bool _elaisLoading = false;
+
+  List<Map<String, dynamic>> get elaisAlerts => _elaisAlerts;
+  List<Map<String, String>> get chatHistory => _chatHistory;
+  String? get dailyBrief => _dailyBrief;
+  bool get elaisLoading => _elaisLoading;
+
   // Settings
   bool _useOnScreenKeyboard = false;
   bool get useOnScreenKeyboard => _useOnScreenKeyboard;
@@ -262,6 +273,9 @@ class PosProvider with ChangeNotifier {
       await fetchOrderHistory();
       await fetchSuppliers();
       await fetchExpenseCategories();
+      // Elais AI Initialization
+      fetchElaisAlerts();
+      fetchDailyBrief();
     }
     notifyListeners();
     return success;
@@ -573,5 +587,116 @@ class PosProvider with ChangeNotifier {
       await fetchSuppliers();
     }
     return success;
+  }
+
+  // Elais AI Methods
+
+  Future<void> fetchElaisAlerts() async {
+    try {
+      final res = await _apiService.get('/api/elais/alerts');
+      if (res != null) {
+        _elaisAlerts = List<Map<String, dynamic>>.from(res['alerts'] ?? []);
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<void> fetchDailyBrief() async {
+    try {
+      final res = await _apiService.get('/api/elais/daily-brief');
+      if (res != null) {
+        _dailyBrief = res['brief'];
+        notifyListeners();
+      }
+    } catch (_) {}
+  }
+
+  Future<String> chatWithElais(String question) async {
+    _elaisLoading = true;
+    notifyListeners();
+    try {
+      _chatHistory.add({'role': 'user', 'content': question});
+      final res = await _apiService.post('/api/elais/chat', {
+        'question': question,
+        'history': _chatHistory.length > 6 ? _chatHistory.sublist(_chatHistory.length - 6) : _chatHistory
+      });
+      final answer = res != null ? res['answer'] as String? ?? 'No response.' : 'Elais is offline.';
+      _chatHistory.add({'role': 'assistant', 'content': answer});
+      notifyListeners();
+      return answer;
+    } catch (e) {
+      const err = 'Elais is offline. Make sure Ollama is running.';
+      _chatHistory.add({'role': 'assistant', 'content': err});
+      notifyListeners();
+      return err;
+    } finally {
+      _elaisLoading = false;
+      notifyListeners();
+    }
+  }
+
+  void clearElaisChat() {
+    _chatHistory.clear();
+    notifyListeners();
+  }
+
+  Future<String> getMonthlyNarrative(int year, int month) async {
+    try {
+      final res = await _apiService.get('/api/elais/monthly-narrative?year=$year&month=$month');
+      return res != null ? res['narrative'] ?? '' : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<Map<String, dynamic>?> getBundleSuggestion(List<int> productIds) async {
+    try {
+      final res = await _apiService.post('/api/elais/bundle-suggestion', {'product_ids': productIds});
+      return res != null ? res['suggestion'] : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String> getDemandForecast() async {
+    try {
+      final res = await _apiService.get('/api/elais/demand-forecast');
+      return res != null ? res['forecast'] ?? '' : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<Map<String, dynamic>?> getSupplierScorecard(String supplierId) async {
+    try {
+      final res = await _apiService.get('/api/elais/supplier-scorecard/$supplierId');
+      return res != null ? Map<String, dynamic>.from(res) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getCashflowForecast() async {
+    try {
+      final res = await _apiService.get('/api/elais/cashflow-forecast');
+      return res != null ? Map<String, dynamic>.from(res) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<String> categorizeExpense(String description) async {
+    try {
+      final res = await _apiService.post('/api/elais/categorize-expense', {'description': description});
+      return res != null ? res['category'] ?? '' : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  Future<void> updateSetting(String key, String value) async {
+    try {
+      await _apiService.post('/api/accounts/settings-update', {'key': key, 'value': value});
+    } catch (_) {}
   }
 }

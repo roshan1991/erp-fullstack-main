@@ -95,7 +95,6 @@ class Sidebar extends StatelessWidget {
               isActive: activePage == 'Barcodes',
               onTap: () => _navigateTo(context, const BarcodesScreen(), 'Barcodes'),
             ),
-            const SizedBox(height: 32),
             _buildMenuItem(
               context: context,
               icon: Icons.account_balance,
@@ -147,6 +146,7 @@ class Sidebar extends StatelessWidget {
     required IconData icon,
     required String label,
     bool isActive = false,
+    bool hasAlert = false,
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -163,10 +163,30 @@ class Sidebar extends StatelessWidget {
             : null,
         child: Column(
           children: [
-            Icon(
-              icon,
-              color: isActive ? const Color(0xFF0882C8) : Colors.grey[600],
-              size: 26,
+            Stack(
+              children: [
+                Icon(
+                  icon,
+                  color: isActive ? const Color(0xFF0882C8) : Colors.grey[600],
+                  size: 26,
+                ),
+                if (hasAlert)
+                  Positioned(
+                    right: 0,
+                    top: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 8,
+                        minHeight: 8,
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 6),
             Text(

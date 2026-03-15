@@ -181,9 +181,9 @@ class ReceiptService {
 
                 pw.SizedBox(height: 20),
                 pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
-                pw.Text('Thank you for your purchase!', style: const pw.TextStyle(fontSize: 10)),
-                pw.Text('Returns within 4 days with receipt', style: const pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic)),
-                pw.Text('Please come again', style: const pw.TextStyle(fontSize: 10)),
+                pw.Text('Thank you for your purchase!', style: pw.TextStyle(fontSize: 10)),
+                pw.Text('Returns within 4 days with receipt', style: pw.TextStyle(fontSize: 8, fontStyle: pw.FontStyle.italic)),
+                pw.Text('Please come again', style: pw.TextStyle(fontSize: 10)),
                 pw.Divider(thickness: 1, borderStyle: pw.BorderStyle.dashed),
               ],
             ),

@@ -21,6 +21,8 @@ class _CartPanelState extends State<CartPanel> {
   final _manualDiscountController = TextEditingController();
   String? _promoError;
   bool _applying = false;
+  Map<String, dynamic>? _elaisSuggestion;
+  bool _loadingSuggestion = false;
 
   @override
   void initState() {
@@ -36,7 +38,26 @@ class _CartPanelState extends State<CartPanel> {
           _applyPromo(provider);
         }
       };
+      _fetchSuggestion();
     });
+  }
+
+  Future<void> _fetchSuggestion() async {
+    final provider = Provider.of<PosProvider>(context, listen: false);
+    if (provider.cart.isEmpty) {
+      setState(() => _elaisSuggestion = null);
+      return;
+    }
+    setState(() => _loadingSuggestion = true);
+    final suggestion = await provider.getBundleSuggestion(
+      provider.cart.map((e) => int.tryParse(e.product.id) ?? 0).toList(),
+    );
+    if (mounted) {
+      setState(() {
+        _elaisSuggestion = suggestion;
+        _loadingSuggestion = false;
+      });
+    }
   }
 
   @override
@@ -184,7 +205,42 @@ class _CartPanelState extends State<CartPanel> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          // --- Elais Bundle Suggestion Chip ---
+          if (provider.cart.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: _loadingSuggestion
+                    ? const SizedBox(height: 30, child: Center(child: LinearProgressIndicator(minHeight: 1, color: Color(0xFFFF6B6B))))
+                    : _elaisSuggestion != null
+                        ? Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                            ),
+                            child: Row(children: [
+                              const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 16),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _elaisSuggestion!['message'] ?? '',
+                                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: () => setState(() => _elaisSuggestion = null),
+                                child: const Icon(Icons.close, color: Colors.white38, size: 14),
+                              ),
+                            ]),
+                          )
+                        : const SizedBox.shrink(),
+              ),
+            ),
+          const SizedBox(height: 12),
 
           // ── Cart Items ───────────────────────────────────────────
           Expanded(

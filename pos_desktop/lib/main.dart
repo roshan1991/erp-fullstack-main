@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'providers/pos_provider.dart';
 import 'screens/login_screen.dart';
 import 'widgets/shortcut_wrapper.dart';
+import 'widgets/elais_floating_button.dart';
 
 import 'services/api_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -55,7 +56,15 @@ class POSApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const LoginScreen(),
-      builder: (context, child) => ShortcutWrapper(navigatorKey: navigatorKey, child: child!),
+      builder: (context, child) => ShortcutWrapper(
+        navigatorKey: navigatorKey,
+        child: Stack(
+          children: [
+            child!,
+            const ElaisFloatingButton(),
+          ],
+        ),
+      ),
     );
   }
 }

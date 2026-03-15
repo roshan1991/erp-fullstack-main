@@ -342,6 +342,7 @@ class _ExpensesTabState extends State<ExpensesTab> {
   DateTime _expenseDate = DateTime.now();
   String? _selectedCategory;
   String _paymentMethod = 'Cash';
+  bool _categorizing = false;
   
   DateTime _fromDate = DateTime.now().subtract(const Duration(days: 30));
   DateTime _toDate = DateTime.now();
@@ -464,7 +465,26 @@ class _ExpensesTabState extends State<ExpensesTab> {
                   controller: _descController,
                   readOnly: provider.useOnScreenKeyboard,
                   onTap: () => provider.useOnScreenKeyboard ? _showKeyboard(_descController) : null,
-                  decoration: const InputDecoration(labelText: 'Description', border: OutlineInputBorder()),
+                  decoration: InputDecoration(
+                    labelText: 'Description',
+                    border: const OutlineInputBorder(),
+                    suffixIcon: _categorizing
+                        ? const SizedBox(width: 16, height: 16, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF6B6B))))
+                        : IconButton(
+                            icon: const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 20),
+                            onPressed: () async {
+                              final desc = _descController.text.trim();
+                              if (desc.isEmpty) return;
+                              setState(() => _categorizing = true);
+                              final cat = await provider.categorizeExpense(desc);
+                              setState(() {
+                                _selectedCategory = cat.isNotEmpty ? cat : _selectedCategory;
+                                _categorizing = false;
+                              });
+                            },
+                            tooltip: 'Elais Magic: Auto-categorize',
+                          ),
+                  ),
                 ),
               ),
               const SizedBox(width: 16),
@@ -588,6 +608,8 @@ class MonthlyReportTab extends StatefulWidget {
 class _MonthlyReportTabState extends State<MonthlyReportTab> {
   int _year = DateTime.now().year;
   int _month = DateTime.now().month;
+  String? _elaisNarrative;
+  bool _loadingNarrative = false;
 
   @override
   void initState() {
@@ -598,6 +620,7 @@ class _MonthlyReportTabState extends State<MonthlyReportTab> {
   void _fetch() {
     Future.microtask(() =>
         Provider.of<PosProvider>(context, listen: false).fetchMonthlyReport(_year, _month));
+    setState(() => _elaisNarrative = null);
   }
 
   void _moveMonth(int delta) {
@@ -636,6 +659,51 @@ class _MonthlyReportTabState extends State<MonthlyReportTab> {
                       Expanded(child: _buildExpenseBreakdown(report)),
                     ],
                   ),
+                  const SizedBox(height: 32),
+                  const SizedBox(height: 32),
+                  if (_loadingNarrative)
+                    const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
+                  else if (_elaisNarrative != null)
+                    Container(
+                      margin: const EdgeInsets.only(bottom: 24),
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                      ),
+                      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                        const Row(children: [
+                          Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 20),
+                          SizedBox(width: 8),
+                          Text('Elais Analysis', style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.bold, fontSize: 16)),
+                        ]),
+                        const SizedBox(height: 12),
+                        Text(_elaisNarrative!, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6)),
+                      ]),
+                    )
+                  else
+                    SizedBox(
+                      width: double.infinity,
+                      height: 50,
+                      child: OutlinedButton.icon(
+                        icon: const Icon(Icons.auto_awesome, size: 18),
+                        label: const Text('Get Elais AI Summary'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFFFF6B6B),
+                          side: const BorderSide(color: Color(0xFFFF6B6B)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        onPressed: () async {
+                          setState(() => _loadingNarrative = true);
+                          final res = await provider.getMonthlyNarrative(_year, _month);
+                          setState(() {
+                            _elaisNarrative = res;
+                            _loadingNarrative = false;
+                          });
+                        },
+                      ),
+                    ),
                   const SizedBox(height: 32),
                   _buildTopProducts(report),
                   const SizedBox(height: 32),

@@ -14,6 +14,8 @@ mkdir "%APP_DIR%"
 
 echo [1/4] Building Flutter Desktop (Release)...
 cd /d "%~dp0pos_desktop"
+call flutter clean
+call flutter pub get
 call flutter build windows --release
 if %ERRORLEVEL% NEQ 0 (
     echo Flutter build failed!
@@ -32,24 +34,37 @@ xcopy /E /I /Y "%~dp0models" "%APP_DIR%\backend\models"
 xcopy /E /I /Y "%~dp0routes" "%APP_DIR%\backend\routes"
 xcopy /E /I /Y "%~dp0sockets" "%APP_DIR%\backend\sockets"
 xcopy /E /I /Y "%~dp0whatsapp" "%APP_DIR%\backend\whatsapp"
+xcopy /E /I /Y "%~dp0public" "%APP_DIR%\backend\public"
+if exist "%~dp0client\dist" (
+    mkdir "%APP_DIR%\backend\client\dist"
+    xcopy /E /I /Y "%~dp0client\dist" "%APP_DIR%\backend\client\dist"
+)
 copy /Y "%~dp0server.js" "%APP_DIR%\backend\"
 copy /Y "%~dp0package.json" "%APP_DIR%\backend\"
 copy /Y "%~dp0.env" "%APP_DIR%\backend\"
 copy /Y "%~dp0users.json" "%APP_DIR%\backend\"
+copy /Y "%~dp0accounts_db.js" "%APP_DIR%\backend\"
+if exist "%~dp0accounts.db" copy /Y "%~dp0accounts.db" "%APP_DIR%\backend\"
 
-echo [3.5/4] Preparing POS Accounts Backend...
-mkdir "%APP_DIR%\accounts_backend"
-xcopy /E /I /Y "%~dp0pos_desktop\server\*" "%APP_DIR%\accounts_backend\"
+echo [4/5] Installing Backend Dependencies...
+cd /d "%APP_DIR%\backend"
+call npm install --production
+if %ERRORLEVEL% NEQ 0 (
+    echo npm install failed!
+    pause
+    exit /b %ERRORLEVEL%
+)
+cd /d "%~dp0"
 
-echo [4/4] Creating Launcher...
+:: Note: AI and Accounts are integrated into the main backend above.
+
+echo [5/5] Creating Launcher...
 
 :: Create a VBScript to start services silently
 (
 echo Set WshShell = CreateObject^("WScript.Shell"^)
-echo ' Start ERP Backend
-echo WshShell.Run "cmd /c cd backend && node server.js", 0, False
-echo ' Start POS Accounts Backend
-echo WshShell.Run "cmd /c cd accounts_backend && node server.js", 0, False
+echo ' Start ERP Backend (includes Elais AI)
+echo WshShell.Run "cmd /c cd backend ^&^& node server.js", 0, False
 echo ' Wait for servers
 echo WScript.Sleep 5000
 echo ' Start POS App
@@ -59,12 +74,11 @@ echo WshShell.Run "elara_pos.exe", 1, True
 :: Create a simple BAT launcher too
 (
 echo @echo off
-echo echo Starting Elara POS Services...
-echo start /min cmd /c "cd backend && node server.js"
-echo start /min cmd /c "cd accounts_backend && node server.js"
+echo echo Starting Elara POS Services (with Elais AI)...
+echo start /min cmd /c "cd backend ^&^& node server.js"
 echo timeout /t 5 /nobreak
 echo start "" "elara_pos.exe"
-) > "%APP_DIR%\LAUCHER.bat"
+) > "%APP_DIR%\LAUNCHER.bat"
 
 echo.
 echo ===================================================
