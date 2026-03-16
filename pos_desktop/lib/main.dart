@@ -61,7 +61,6 @@ class POSApp extends StatelessWidget {
         child: Stack(
           children: [
             child!,
-            const ElaisFloatingButton(),
           ],
         ),
       ),

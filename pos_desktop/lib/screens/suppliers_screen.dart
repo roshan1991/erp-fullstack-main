@@ -122,7 +122,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 IconButton(
-                                                  icon: const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B)),
+                                                  icon: const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D)),
                                                   onPressed: () => _showElaisScorecard(context, provider, s),
                                                   tooltip: 'Elais Scorecard',
                                                 ),
@@ -261,7 +261,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
           return AlertDialog(
             backgroundColor: const Color(0xFF2A2A3C),
             title: Row(children: [
-              const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 20),
+              const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 20),
               const SizedBox(width: 8),
               Text('Elais Scorecard: ${s.name}', style: const TextStyle(fontSize: 18)),
             ]),
@@ -270,7 +270,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
               child: loading 
                 ? const Column(mainAxisSize: MainAxisSize.min, children: [
                     SizedBox(height: 20),
-                    CircularProgressIndicator(color: Color(0xFFFF6B6B)),
+                    CircularProgressIndicator(color: const Color(0xFFD2042D)),
                     SizedBox(height: 20),
                     Text('Analyzing supplier performance...', style: TextStyle(color: Colors.white70)),
                   ])
@@ -280,7 +280,7 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                       mainAxisSize: MainAxisSize.min,
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('AI Performance Summary', style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.bold)),
+                        const Text('AI Performance Summary', style: TextStyle(color: const Color(0xFFD2042D), fontWeight: FontWeight.bold)),
                         const SizedBox(height: 12),
                         Container(
                           padding: const EdgeInsets.all(16),

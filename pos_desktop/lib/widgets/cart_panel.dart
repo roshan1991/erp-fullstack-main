@@ -213,17 +213,17 @@ class _CartPanelState extends State<CartPanel> {
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 300),
                 child: _loadingSuggestion
-                    ? const SizedBox(height: 30, child: Center(child: LinearProgressIndicator(minHeight: 1, color: Color(0xFFFF6B6B))))
+                    ? const SizedBox(height: 30, child: Center(child: LinearProgressIndicator(minHeight: 1, color: const Color(0xFFD2042D))))
                     : _elaisSuggestion != null
                         ? Container(
                             padding: const EdgeInsets.all(10),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                              color: const Color(0xFFD2042D).withOpacity(0.1),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                              border: Border.all(color: const Color(0xFFD2042D).withOpacity(0.3)),
                             ),
                             child: Row(children: [
-                              const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 16),
+                              const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 16),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(

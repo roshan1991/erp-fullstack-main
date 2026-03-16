@@ -46,6 +46,10 @@ try {
   db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES
     ('elais_model', 'phi3:mini'),
     ('elais_enabled', '1'),
+    ('elais_source', 'local'),
+    ('elais_online_url', 'https://ollama.com/api/chat'),
+    ('elais_online_key', 'bb2b103e40b14846be8287cd366b3994.i2w1u91QQwYB2ePug1CB2B_m'),
+    ('elais_online_model', 'qwen3.5'),
     ('elais_personality', 'You are Elais, a friendly and smart business assistant for a clothing store in Sri Lanka. You speak in clear, simple English. Currency is always LKR. Be concise and practical. Never make up data.')`);
 } catch(e) {
   console.error("Database initialization error:", e);

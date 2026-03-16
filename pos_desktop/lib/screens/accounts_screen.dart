@@ -469,9 +469,9 @@ class _ExpensesTabState extends State<ExpensesTab> {
                     labelText: 'Description',
                     border: const OutlineInputBorder(),
                     suffixIcon: _categorizing
-                        ? const SizedBox(width: 16, height: 16, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF6B6B))))
+                        ? const SizedBox(width: 16, height: 16, child: Padding(padding: EdgeInsets.all(12), child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFFD2042D))))
                         : IconButton(
-                            icon: const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 20),
+                            icon: const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 20),
                             onPressed: () async {
                               final desc = _descController.text.trim();
                               if (desc.isEmpty) return;
@@ -662,21 +662,21 @@ class _MonthlyReportTabState extends State<MonthlyReportTab> {
                   const SizedBox(height: 32),
                   const SizedBox(height: 32),
                   if (_loadingNarrative)
-                    const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
+                    const Center(child: CircularProgressIndicator(color: const Color(0xFFD2042D)))
                   else if (_elaisNarrative != null)
                     Container(
                       margin: const EdgeInsets.only(bottom: 24),
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF6B6B).withOpacity(0.1),
+                        color: const Color(0xFFD2042D).withOpacity(0.1),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+                        border: Border.all(color: const Color(0xFFD2042D).withOpacity(0.3)),
                       ),
                       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                         const Row(children: [
-                          Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 20),
+                          Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 20),
                           SizedBox(width: 8),
-                          Text('Elais Analysis', style: TextStyle(color: Color(0xFFFF6B6B), fontWeight: FontWeight.bold, fontSize: 16)),
+                          Text('Elais Analysis', style: TextStyle(color: const Color(0xFFD2042D), fontWeight: FontWeight.bold, fontSize: 16)),
                         ]),
                         const SizedBox(height: 12),
                         Text(_elaisNarrative!, style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.6)),
@@ -690,8 +690,8 @@ class _MonthlyReportTabState extends State<MonthlyReportTab> {
                         icon: const Icon(Icons.auto_awesome, size: 18),
                         label: const Text('Get Elais AI Summary'),
                         style: OutlinedButton.styleFrom(
-                          foregroundColor: const Color(0xFFFF6B6B),
-                          side: const BorderSide(color: Color(0xFFFF6B6B)),
+                          foregroundColor: const Color(0xFFD2042D),
+                          side: const BorderSide(color: const Color(0xFFD2042D)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         onPressed: () async {

@@ -13,6 +13,10 @@ class PosProvider with ChangeNotifier {
   final ApiService _apiService = ApiService();
   ApiService get apiService => _apiService;
 
+  PosProvider() {
+    initializeSettings();
+  }
+
   VoidCallback? onCheckoutTrigger;
   VoidCallback? onApplyTrigger;
   VoidCallback? onSearchTrigger;
@@ -58,6 +62,23 @@ class PosProvider with ChangeNotifier {
 
   bool _useKeyboardShortcuts = true;
   bool get useKeyboardShortcuts => _useKeyboardShortcuts;
+
+  // Elais Settings
+  bool _elaisEnabled = true;
+  String _elaisSource = 'local';
+  String _elaisModel = 'phi3:mini';
+  String _elaisOnlineUrl = 'https://ollama.com/api/chat';
+  String _elaisOnlineKey = 'bb2b103e40b14846be8287cd366b3994.i2w1u91QQwYB2ePug1CB2B_m';
+  String _elaisOnlineModel = 'qwen3.5';
+  String _elaisPersonality = "You are Elais, a smart business assistant.";
+
+  bool get elaisEnabled => _elaisEnabled;
+  String get elaisSource => _elaisSource;
+  String get elaisModel => _elaisModel;
+  String get elaisOnlineUrl => _elaisOnlineUrl;
+  String get elaisOnlineKey => _elaisOnlineKey;
+  String get elaisOnlineModel => _elaisOnlineModel;
+  String get elaisPersonality => _elaisPersonality;
 
   void setUseOnScreenKeyboard(bool value) {
     _useOnScreenKeyboard = value;
@@ -259,7 +280,6 @@ class PosProvider with ChangeNotifier {
   double get total => (subtotal - discount) < 0 ? 0 : (subtotal - discount);
   int get totalItems => _cart.fold(0, (sum, item) => sum + item.quantity);
 
-  PosProvider();
 
   Future<bool> login(String username, String password) async {
     _isLoading = true;
@@ -620,12 +640,21 @@ class PosProvider with ChangeNotifier {
         'question': question,
         'history': _chatHistory.length > 6 ? _chatHistory.sublist(_chatHistory.length - 6) : _chatHistory
       });
-      final answer = res != null ? res['answer'] as String? ?? 'No response.' : 'Elais is offline.';
+      
+      if (res == null) {
+        throw Exception(_apiService.lastError ?? 'Unknown API error');
+      }
+      
+      final answer = res['answer'] as String? ?? 'No response content.';
       _chatHistory.add({'role': 'assistant', 'content': answer});
       notifyListeners();
       return answer;
     } catch (e) {
-      const err = 'Elais is offline. Make sure Ollama is running.';
+      final source = _elaisSource == 'local' ? 'Local Ollama' : 'Online Cloud';
+      String errMsg = e.toString();
+      if (errMsg.contains('Exception:')) errMsg = errMsg.split('Exception:').last.trim();
+      
+      final err = 'Elais Error ($source): $errMsg';
       _chatHistory.add({'role': 'assistant', 'content': err});
       notifyListeners();
       return err;
@@ -696,7 +725,40 @@ class PosProvider with ChangeNotifier {
 
   Future<void> updateSetting(String key, String value) async {
     try {
+      // Update local state if it matches these specific settings
+      if (key == 'elais_enabled') _elaisEnabled = value == '1';
+      if (key == 'elais_source') _elaisSource = value;
+      if (key == 'elais_model') _elaisModel = value;
+      if (key == 'elais_online_url') _elaisOnlineUrl = value;
+      if (key == 'elais_online_key') _elaisOnlineKey = value;
+      if (key == 'elais_online_model') _elaisOnlineModel = value;
+      if (key == 'elais_personality') _elaisPersonality = value;
+      
+      notifyListeners();
       await _apiService.post('/api/accounts/settings-update', {'key': key, 'value': value});
     } catch (_) {}
+  }
+
+  void setElaisEnabled(bool value) {
+    _elaisEnabled = value;
+    updateSetting('elais_enabled', value ? '1' : '0');
+  }
+
+  Future<void> initializeSettings() async {
+    try {
+      final settings = await _apiService.get('/api/accounts/settings');
+      if (settings != null) {
+        if (settings['elais_enabled'] != null) _elaisEnabled = settings['elais_enabled'] == '1';
+        if (settings['elais_source'] != null) _elaisSource = settings['elais_source'];
+        if (settings['elais_model'] != null) _elaisModel = settings['elais_model'];
+        if (settings['elais_online_url'] != null) _elaisOnlineUrl = settings['elais_online_url'];
+        if (settings['elais_online_key'] != null) _elaisOnlineKey = settings['elais_online_key'];
+        if (settings['elais_online_model'] != null) _elaisOnlineModel = settings['elais_online_model'];
+        if (settings['elais_personality'] != null) _elaisPersonality = settings['elais_personality'];
+        notifyListeners();
+      }
+    } catch (_) {
+      debugPrint('Failed to load settings from server');
+    }
   }
 }

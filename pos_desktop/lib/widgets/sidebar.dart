@@ -7,6 +7,8 @@ import '../screens/suppliers_screen.dart';
 import '../screens/products_screen.dart';
 import '../screens/barcodes_screen.dart';
 import '../screens/accounts_screen.dart';
+import '../screens/elais_screen.dart';
+
 import 'package:provider/provider.dart';
 import '../providers/pos_provider.dart';
 import '../utils/fullscreen.dart';
@@ -95,6 +97,7 @@ class Sidebar extends StatelessWidget {
               isActive: activePage == 'Barcodes',
               onTap: () => _navigateTo(context, const BarcodesScreen(), 'Barcodes'),
             ),
+            const SizedBox(height: 32),
             _buildMenuItem(
               context: context,
               icon: Icons.account_balance,
@@ -125,6 +128,17 @@ class Sidebar extends StatelessWidget {
             onTap: () => toggleFullScreen(),
           ),
           const SizedBox(height: 16),
+          // Elais AI
+          _buildMenuItem(
+            context: context,
+            icon: Icons.auto_awesome,
+            label: 'Elais AI',
+            isActive: activePage == 'elais',
+            activeColor: const Color(0xFFD2042D),
+            hasAlert: provider.elaisAlerts.isNotEmpty,
+            onTap: () => _navigateTo(context, const ElaisScreen(), 'elais'),
+          ),
+          const SizedBox(height: 16),
         ],
       ),
     );
@@ -147,6 +161,7 @@ class Sidebar extends StatelessWidget {
     required String label,
     bool isActive = false,
     bool hasAlert = false,
+    Color activeColor = const Color(0xFF0882C8),
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -157,7 +172,7 @@ class Sidebar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: isActive
             ? BoxDecoration(
-                color: const Color(0xFF0882C8).withOpacity(0.15),
+                color: activeColor.withOpacity(0.15),
                 borderRadius: BorderRadius.circular(16),
               )
             : null,
@@ -167,7 +182,7 @@ class Sidebar extends StatelessWidget {
               children: [
                 Icon(
                   icon,
-                  color: isActive ? const Color(0xFF0882C8) : Colors.grey[600],
+                  color: isActive ? activeColor : Colors.grey[600],
                   size: 26,
                 ),
                 if (hasAlert)
@@ -192,7 +207,7 @@ class Sidebar extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isActive ? const Color(0xFF0882C8) : Colors.grey[600],
+                color: isActive ? activeColor : Colors.grey[600],
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
               ),

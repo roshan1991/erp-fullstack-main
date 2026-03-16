@@ -213,4 +213,27 @@ router.post('/categories', (req, res) => {
   }
 });
 
+// GET /settings — return all settings
+router.get('/settings', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM settings').all();
+    const settings = {};
+    rows.forEach(r => settings[r.key] = r.value);
+    res.json(settings);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// POST /settings-update — update a specific setting
+router.post('/settings-update', (req, res) => {
+  try {
+    const { key, value } = req.body;
+    db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)').run(key, value.toString());
+    res.json({ success: true, key, value });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

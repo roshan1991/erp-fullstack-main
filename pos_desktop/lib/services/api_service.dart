@@ -472,7 +472,7 @@ class ApiService {
       final response = await http.get(
         Uri.parse('$serverUrl$path'),
         headers: {'Content-Type': 'application/json'},
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
       if (response.statusCode == 200) {
         return json.decode(response.body);
       }
@@ -491,7 +491,7 @@ class ApiService {
         Uri.parse('$serverUrl$path'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(body),
-      ).timeout(const Duration(seconds: 10));
+      ).timeout(const Duration(seconds: 30));
       if (response.statusCode == 200 || response.statusCode == 201) {
         return json.decode(response.body);
       }

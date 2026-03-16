@@ -14,6 +14,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _urlController;
+  late TextEditingController _elaisOnlineUrlController;
+  late TextEditingController _elaisOnlineKeyController;
+  late TextEditingController _elaisOnlineModelController;
+  late TextEditingController _elaisPersonalityController;
   TextEditingController? _activeController;
 
   // List of actual printers fetched from the system
@@ -25,6 +29,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     final provider = Provider.of<PosProvider>(context, listen: false);
     _urlController = TextEditingController(text: provider.serverUrl);
+    _elaisOnlineUrlController = TextEditingController(text: provider.elaisOnlineUrl);
+    _elaisOnlineKeyController = TextEditingController(text: provider.elaisOnlineKey);
+    _elaisOnlineModelController = TextEditingController(text: provider.elaisOnlineModel);
+    _elaisPersonalityController = TextEditingController(text: provider.elaisPersonality);
     _loadPrinters(); // Load initially
   }
 
@@ -44,6 +52,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _urlController.dispose();
+    _elaisOnlineUrlController.dispose();
+    _elaisOnlineKeyController.dispose();
+    _elaisOnlineModelController.dispose();
+    _elaisPersonalityController.dispose();
     super.dispose();
   }
 
@@ -325,37 +337,116 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
                                       Text('Elais AI assistant', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
                                       SizedBox(height: 4),
-                                      Text('Configure offline AI features', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                      Text('Configure offline & online AI features', style: TextStyle(color: Colors.grey, fontSize: 13)),
                                     ]),
                                     Switch(
-                                      value: true, // Placeholder until persistence is bridged
-                                      onChanged: (val) {},
-                                      activeThumbColor: const Color(0xFFFF6B6B),
+                                      value: provider.elaisEnabled,
+                                      onChanged: (val) => provider.setElaisEnabled(val),
+                                      activeThumbColor: const Color(0xFFD2042D), // Cherry Red
                                     ),
                                   ],
                                 ),
                                 const Divider(height: 32, color: Colors.white10),
-                                const Text('Ollama Model', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                
+                                const Text('AI Source', style: TextStyle(color: Colors.white70, fontSize: 13)),
                                 const SizedBox(height: 8),
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 12),
                                   decoration: BoxDecoration(color: const Color(0xFF1E1E2C), borderRadius: BorderRadius.circular(10)),
                                   child: DropdownButtonHideUnderline(
                                     child: DropdownButton<String>(
-                                      value: 'phi3:mini',
+                                      value: provider.elaisSource,
                                       isExpanded: true,
                                       dropdownColor: const Color(0xFF2A2A3C),
-                                      items: ['phi3:mini', 'llama3', 'mistral', 'gemma'].map((m) => DropdownMenuItem<String>(value: m, child: Text(m))).toList(),
-                                      onChanged: (val) => provider.updateSetting('elais_model', val!),
+                                      items: const [
+                                        DropdownMenuItem(value: 'local', child: Text('Local (Ollama)')),
+                                        DropdownMenuItem(value: 'online', child: Text('Online (Cloud)')),
+                                      ],
+                                      onChanged: (val) => provider.updateSetting('elais_source', val!),
                                     ),
                                   ),
                                 ),
+                                const SizedBox(height: 16),
+
+                                if (provider.elaisSource == 'local') ...[
+                                  const Text('Ollama Model', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(color: const Color(0xFF1E1E2C), borderRadius: BorderRadius.circular(10)),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: provider.elaisModel,
+                                        isExpanded: true,
+                                        dropdownColor: const Color(0xFF2A2A3C),
+                                        items: ['phi3:mini', 'llama3', 'mistral', 'gemma'].map((m) => DropdownMenuItem<String>(value: m, child: Text(m))).toList(),
+                                        onChanged: (val) => provider.updateSetting('elais_model', val!),
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const Text('Online API URL', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineUrlController,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'https://ollama.com/api/chat',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Online API Key', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineKeyController,
+                                    style: const TextStyle(fontSize: 13),
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'Enter API Key',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Online Model Name', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineModelController,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'qwen3.5',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        provider.updateSetting('elais_online_url', _elaisOnlineUrlController.text);
+                                        provider.updateSetting('elais_online_key', _elaisOnlineKeyController.text);
+                                        provider.updateSetting('elais_online_model', _elaisOnlineModelController.text);
+                                        provider.updateSetting('elais_personality', _elaisPersonalityController.text);
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI assistant settings saved!')));
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD2042D)),
+                                      child: const Text('Save Online Configuration', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                ],
+                                
                                 const SizedBox(height: 16),
                                 const Text('Elais Personality', style: TextStyle(color: Colors.white70, fontSize: 13)),
                                 const SizedBox(height: 8),
                                 TextField(
                                   maxLines: 2,
-                                  controller: TextEditingController(text: 'You are Elais, a friendly and smart business assistant...'),
+                                  controller: _elaisPersonalityController,
                                   style: const TextStyle(fontSize: 13),
                                   decoration: InputDecoration(
                                     filled: true,
@@ -374,10 +465,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                       },
                                       icon: const Icon(Icons.bolt, size: 16),
                                       label: const Text('Test Connection'),
-                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFFF6B6B), foregroundColor: Colors.white),
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD2042D), foregroundColor: Colors.white),
                                     ),
                                     const Spacer(),
-                                    const Text('Ollama (11434)', style: TextStyle(color: Colors.greenAccent, fontSize: 11)),
+                                    Text(
+                                      provider.elaisSource == 'local' ? 'Ollama (11434)' : 'Online Cloud', 
+                                      style: TextStyle(color: provider.elaisSource == 'local' ? Colors.greenAccent : Colors.blueAccent, fontSize: 11)
+                                    ),
                                   ],
                                 ),
                               ],

@@ -3,43 +3,94 @@ const router = express.Router();
 const db = require('../accounts_db');
 
 /**
- * Shared helper: askOllama
- * Communicates with the local Ollama instance.
+ * Shared helper: askAI
+ * Communicates with either local Ollama or an online API.
  */
-async function askOllama(prompt, systemPrompt, model = 'phi3:mini') {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 8000); // 8s timeout
+async function askAI(prompt, systemPrompt, history = []) {
+  const elaisEnabled = db.prepare("SELECT value FROM settings WHERE key='elais_enabled'").get()?.value === '1';
+  if (!elaisEnabled) throw new Error('Elais AI is currently disabled in settings.');
+
+  const elaisSource = db.prepare("SELECT value FROM settings WHERE key='elais_source'").get()?.value || 'local';
+  const personality = db.prepare("SELECT value FROM settings WHERE key='elais_personality'").get()?.value || "You are Elais, a smart business assistant.";
+
+  console.log(`[Elais AI] Source: ${elaisSource}`);
+
+  // Prepare messages array
+  const messages = [{ role: 'system', content: personality + '\n\n' + (systemPrompt || '') }];
   
-  try {
-    // Read model and personality from settings if available
-    const settingRow = db.prepare("SELECT value FROM settings WHERE key='elais_model'").get();
-    const resolvedModel = settingRow ? settingRow.value : model;
+  // Add history (filter out the context blocks from previous messages to save tokens if needed)
+  history.forEach(m => {
+    if (m.role && m.content) messages.push({ role: m.role, content: m.content });
+  });
+
+  // Add current prompt
+  messages.push({ role: 'user', content: prompt });
+
+  if (elaisSource === 'local') {
+    const model = db.prepare("SELECT value FROM settings WHERE key='elais_model'").get()?.value || 'phi3:mini';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12000); 
     
-    const personalityRow = db.prepare("SELECT value FROM settings WHERE key='elais_personality'").get();
-    const personality = personalityRow ? personalityRow.value : "You are Elais, a smart business assistant.";
+    try {
+      const response = await fetch('http://localhost:11434/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+        body: JSON.stringify({ model, stream: false, messages })
+      });
 
-    const response = await fetch('http://localhost:11434/api/chat', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model: resolvedModel,
-        stream: false,
-        messages: [
-          { role: 'system', content: personality + '\n\n' + (systemPrompt || '') },
-          { role: 'user',   content: prompt }
-        ]
-      })
-    });
+      clearTimeout(timeout);
+      if (!response.ok) throw new Error('Ollama returned ' + response.status);
+      const data = await response.json();
+      return data.message?.content?.trim() || 'No response from local Elais.';
+    } catch (err) {
+      clearTimeout(timeout);
+      console.error('Local AI Error:', err.message);
+      throw new Error('Local Elais is offline. Ensure Ollama is running on port 11434.');
+    }
+  } else {
+    // Online AI Source
+    const apiUrl = db.prepare("SELECT value FROM settings WHERE key='elais_online_url'").get()?.value || 'https://ollama.com/api/chat';
+    const apiKey = db.prepare("SELECT value FROM settings WHERE key='elais_online_key'").get()?.value || '';
+    const apiModel = db.prepare("SELECT value FROM settings WHERE key='elais_online_model'").get()?.value || 'qwen3.5';
 
-    clearTimeout(timeout);
-    if (!response.ok) throw new Error('Ollama returned ' + response.status);
-    const data = await response.json();
-    return data.message?.content?.trim() || 'No response from Elais.';
-  } catch (err) {
-    clearTimeout(timeout);
-    console.error('Ollama connection error:', err.message);
-    throw new Error('Elais is offline. Please ensure Ollama is running on port 11434.');
+    console.log(`[Elais AI] Cloud Request - URL: ${apiUrl}, Model: ${apiModel}`);
+    if (!apiKey) throw new Error('API Key is missing for online Elais.');
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30000); // 30s for cloud
+
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        signal: controller.signal,
+        body: JSON.stringify({ 
+          model: apiModel, 
+          stream: false, 
+          messages 
+        })
+      });
+
+      clearTimeout(timeout);
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(`API Error ${response.status}: ${errText}`);
+      }
+      const data = await response.json();
+      
+      // Support multiple response formats
+      return data.choices?.[0]?.message?.content?.trim() || 
+             data.message?.content?.trim() || 
+             'No response content from online Elais.';
+    } catch (err) {
+      clearTimeout(timeout);
+      console.error('Online AI Error:', err.message);
+      throw new Error('Online Elais unreachable: ' + err.message);
+    }
   }
 }
 
@@ -84,7 +135,7 @@ This month P&L: Revenue LKR ${monthlyPL.revenue.toFixed(0)}, COGS LKR ${monthlyP
 `;
 
     const fullPrompt = contextBlock + '\n\nUser question: ' + question;
-    const answer = await askOllama(fullPrompt, '');
+    const answer = await askAI(fullPrompt, '', history);
     res.json({ answer, timestamp: new Date().toISOString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -95,6 +146,7 @@ This month P&L: Revenue LKR ${monthlyPL.revenue.toFixed(0)}, COGS LKR ${monthlyP
  * GET /api/elais/daily-brief
  */
 router.get('/daily-brief', async (req, res) => {
+  console.log('[Elais AI] Fetching Daily Brief...');
   try {
     const yesterday = db.prepare(`
       SELECT COALESCE(SUM(CASE WHEN type='income' THEN amount END),0) as revenue,
@@ -108,7 +160,7 @@ router.get('/daily-brief', async (req, res) => {
 Yesterday: ${yesterday.sales_count} sales, LKR ${yesterday.revenue.toFixed(0)} revenue, LKR ${yesterday.profit.toFixed(0)} profit.
 Write a concise 3-sentence morning briefing for the store owner. Be upbeat but practical.`;
 
-    const brief = await askOllama(prompt, '');
+    const brief = await askAI(prompt, '');
     res.json({ brief });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -119,6 +171,7 @@ Write a concise 3-sentence morning briefing for the store owner. Be upbeat but p
  * GET /api/elais/alerts
  */
 router.get('/alerts', async (req, res) => {
+  console.log('[Elais AI] Processing Alerts...');
   try {
     const alerts = [];
 
@@ -159,8 +212,21 @@ router.get('/alerts', async (req, res) => {
       });
     }
 
+    // Initial Setup Alert
+    const totalTransactions = db.prepare("SELECT COUNT(*) as count FROM accounts_transactions").get()?.count || 0;
+    if (totalTransactions === 0) {
+      alerts.push({
+        type: 'system',
+        severity: 'info',
+        title: 'Ready to start!',
+        message: 'Your accounts are ready. Record your first sale or expense to see AI insights here.',
+        action: 'Go to POS'
+      });
+    }
+
     res.json({ alerts, count: alerts.length });
   } catch (err) {
+    console.error('Alerts error:', err.message);
     res.status(500).json({ error: err.message, alerts: [] });
   }
 });
@@ -179,7 +245,7 @@ router.post('/categorize-expense', async (req, res) => {
       `Available categories: ${cats.join(', ')}\n` +
       `Reply with ONLY the category name that best matches. No explanation.`;
 
-    const category = await askOllama(prompt, 'You are an expense classifier. Reply with only one category name from the list.');
+    const category = await askAI(prompt, 'You are an expense classifier. Reply with only one category name from the list.');
     const cleaned = category.replace(/[^a-zA-Z0-9 \/]/g, '').trim();
     const matched = cats.find(c => c.toLowerCase() === cleaned.toLowerCase()) || cats[cats.length - 1];
     res.json({ category: matched });
@@ -220,7 +286,7 @@ Net Profit: LKR ${net.toFixed(0)}
 Total transactions: ${pl.sale_count}
 Write a concise 4-sentence business summary for the clothing store owner. Highlight one positive, one concern, and one practical action.`;
 
-    const narrative = await askOllama(prompt, '');
+    const narrative = await askAI(prompt, '');
     res.json({ narrative, year, month });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -239,7 +305,7 @@ router.post('/bundle-suggestion', async (req, res) => {
     Suggest ONE additional item a clothing store customer might buy. 
     Keep it very short (e.g., "Would you like to add matching socks?").`;
     
-    const suggestion = await askOllama(prompt, 'You are a POS upsell assistant. Keep suggestions under 15 words.');
+    const suggestion = await askAI(prompt, 'You are a POS upsell assistant. Keep suggestions under 15 words.');
     res.json({ suggestion: { message: suggestion } });
   } catch (err) {
     res.json({ suggestion: null });
@@ -250,10 +316,11 @@ router.post('/bundle-suggestion', async (req, res) => {
  * GET /api/elais/demand-forecast
  */
 router.get('/demand-forecast', async (req, res) => {
+  console.log('[Elais AI] Requesting Demand Forecast...');
   try {
     const prompt = `Based on recent sales trends, analyze which collections or categories might see increased demand next week. 
     Write a short 3-sentence forecast. Mention a specific clothing category (e.g. Summer wear, Formal shirts).`;
-    const forecast = await askOllama(prompt, '');
+    const forecast = await askAI(prompt, '');
     res.json({ forecast });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -264,6 +331,7 @@ router.get('/demand-forecast', async (req, res) => {
  * GET /api/elais/cashflow-forecast
  */
 router.get('/cashflow-forecast', async (req, res) => {
+  console.log('[Elais AI] Requesting Cashflow Forecast...');
   try {
     const avgRevenue = db.prepare(`
       SELECT COALESCE(AVG(daily_rev),0) as avg
@@ -288,7 +356,7 @@ Expected expenses: LKR ${projectedExpenses}
 Net projected position: LKR ${(projectedRevenue - projectedExpenses).toFixed(0)}
 Write a concise 3-sentence practical cash flow forecast for the store owner.`;
 
-    const forecast = await askOllama(prompt, '');
+    const forecast = await askAI(prompt, '');
     res.json({
       forecast,
       projected_revenue: parseFloat(projectedRevenue),
@@ -305,7 +373,7 @@ Write a concise 3-sentence practical cash flow forecast for the store owner.`;
 router.get('/supplier-scorecard/:id', async (req, res) => {
   try {
     const prompt = `Analyze a generic supplier performance assessment. Provide a 3-sentence summary rating the supplier (A/B/C) based on responsiveness and consistency.`;
-    const summary = await askOllama(prompt, '');
+    const summary = await askAI(prompt, '');
     res.json({ summary });
   } catch (err) {
     res.status(500).json({ error: err.message });

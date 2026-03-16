@@ -23,7 +23,9 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
     super.initState();
     _tabCtrl = TabController(length: 3, vsync: this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<PosProvider>().fetchElaisAlerts();
+      final prov = context.read<PosProvider>();
+      prov.fetchElaisAlerts();
+      prov.fetchDailyBrief();
     });
   }
 
@@ -61,7 +63,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
         constraints: const BoxConstraints(maxWidth: 280),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFFFF6B6B) : const Color(0xFF3A3A4C),
+          color: isUser ? const Color(0xFFD2042D) : const Color(0xFF3A3A4C),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Text(msg['content'] ?? '',
@@ -100,9 +102,9 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
     return Column(children: [
       TabBar(
         controller: _tabCtrl,
-        labelColor: const Color(0xFFFF6B6B),
+        labelColor: const Color(0xFFD2042D),
         unselectedLabelColor: Colors.white38,
-        indicatorColor: const Color(0xFFFF6B6B),
+        indicatorColor: const Color(0xFFD2042D),
         labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
         tabs: const [Tab(text: 'ALERTS'), Tab(text: 'FORECAST'), Tab(text: 'CASH FLOW')],
       ),
@@ -119,14 +121,14 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
                 decoration: BoxDecoration(
                   color: const Color(0xFF2A2A3C),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.4)),
+                  border: Border.all(color: const Color(0xFFD2042D).withOpacity(0.4)),
                 ),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                   Row(children: [
-                    const Icon(Icons.wb_sunny, color: Color(0xFFFF6B6B), size: 16),
+                    const Icon(Icons.wb_sunny, color: const Color(0xFFD2042D), size: 16),
                     const SizedBox(width: 6),
                     Text('Good morning from Elais',
-                        style: const TextStyle(color: Color(0xFFFF6B6B), fontSize: 12, fontWeight: FontWeight.bold)),
+                        style: const TextStyle(color: const Color(0xFFD2042D), fontSize: 12, fontWeight: FontWeight.bold)),
                   ]),
                   const SizedBox(height: 8),
                   Text(prov.dailyBrief!, style: const TextStyle(color: Colors.white70, fontSize: 12, height: 1.5)),
@@ -151,7 +153,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
               icon: const Icon(Icons.trending_up, size: 16),
               label: const Text('Generate demand forecast', style: TextStyle(fontSize: 13)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFF6B6B),
+                backgroundColor: const Color(0xFFD2042D),
                 foregroundColor: Colors.white,
               ),
               onPressed: _loadingForecast
@@ -159,12 +161,13 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
                   : () async {
                       setState(() => _loadingForecast = true);
                       _forecast = await context.read<PosProvider>().getDemandForecast();
+                      if (_forecast.isEmpty) _forecast = 'Elais was unable to generate a forecast. Please check your AI settings.';
                       setState(() => _loadingForecast = false);
                     },
             ),
             const SizedBox(height: 12),
             if (_loadingForecast)
-              const Center(child: CircularProgressIndicator(color: Color(0xFFFF6B6B)))
+              const Center(child: CircularProgressIndicator(color: const Color(0xFFD2042D)))
             else if (_forecast.isNotEmpty)
               Container(
                 padding: const EdgeInsets.all(14),
@@ -192,6 +195,9 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
                   : () async {
                       setState(() => _loadingCashflow = true);
                       _cashflow = await context.read<PosProvider>().getCashflowForecast();
+                      if (_cashflow == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Failed to generate cash flow forecast. Check AI settings.')));
+                      }
                       setState(() => _loadingCashflow = false);
                     },
             ),
@@ -249,10 +255,10 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: const Color(0xFFFF6B6B).withOpacity(0.2),
+              color: const Color(0xFFD2042D).withOpacity(0.2),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.auto_awesome, color: Color(0xFFFF6B6B), size: 18),
+            child: const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 18),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -310,8 +316,8 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
           color: const Color(0xFF2A2A3C),
           child: TabBar(
             controller: _tabCtrl,
-            indicatorColor: const Color(0xFFFF6B6B),
-            labelColor: const Color(0xFFFF6B6B),
+            indicatorColor: const Color(0xFFD2042D),
+            labelColor: const Color(0xFFD2042D),
             tabs: const [Tab(text: 'Chat'), Tab(text: 'Insights')],
           ),
         ),
@@ -345,7 +351,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
         child: prov.chatHistory.isEmpty
             ? Center(
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.auto_awesome, size: 40, color: Color(0xFFFF6B6B)),
+                const Icon(Icons.auto_awesome, size: 40, color: const Color(0xFFD2042D)),
                 const SizedBox(height: 12),
                 const Text('Hi, I\'m Elais!',
                     style: TextStyle(color: Colors.white70, fontSize: 16, fontWeight: FontWeight.bold)),
@@ -363,7 +369,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
                         SizedBox(
                             width: 14,
                             height: 14,
-                            child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFFF6B6B))),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: const Color(0xFFD2042D))),
                         SizedBox(width: 8),
                         Text('Elais is thinking...', style: TextStyle(color: Colors.white38, fontSize: 11)),
                       ]),
@@ -403,7 +409,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
               width: 36,
               height: 36,
               decoration: const BoxDecoration(
-                color: Color(0xFFFF6B6B),
+                color: const Color(0xFFD2042D),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.send, color: Colors.white, size: 16),
@@ -427,7 +433,7 @@ class _ElaisScreenState extends State<ElaisScreen> with SingleTickerProviderStat
         decoration: BoxDecoration(
           color: const Color(0xFF3A3A4C),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFFF6B6B).withOpacity(0.3)),
+          border: Border.all(color: const Color(0xFFD2042D).withOpacity(0.3)),
         ),
         child: Text(text, style: const TextStyle(color: Colors.white60, fontSize: 11)),
       ),
