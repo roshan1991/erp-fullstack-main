@@ -353,9 +353,24 @@ class PosProvider with ChangeNotifier {
 
   void addProductByBarcode(String barcode) {
     if (barcode.trim().isEmpty) return;
+    String rawData = barcode.trim();
+    String sku = rawData;
+    double autoDiscount = 0.0;
+
+    // Support encoded discounts: SKU@10 (for 10% discount)
+    if (rawData.contains('@')) {
+      final parts = rawData.split('@');
+      sku = parts[0];
+      autoDiscount = double.tryParse(parts[1]) ?? 0.0;
+    }
+
     try {
-      final product = _products.firstWhere((p) => p.sku == barcode.trim() || p.id == barcode.trim());
+      final product = _products.firstWhere((p) => p.sku == sku || p.id == sku);
       addToCart(product);
+      
+      if (autoDiscount > 0) {
+        updateItemDiscount(product.id, autoDiscount);
+      }
     } catch (e) {
       // Product not found
     }

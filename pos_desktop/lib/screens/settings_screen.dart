@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/pos_provider.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/app_keyboard.dart';
@@ -228,6 +229,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
                                     style: const TextStyle(color: Color(0xFF0882C8), fontSize: 12, fontWeight: FontWeight.bold),
                                   ),
                                 ]
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Barcode Printer Setting
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A2A3C),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Barcode Printer',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Reset saved thermal printer for barcodes',
+                                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.remove('barcode_printer_name');
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Barcode printer cleared. You will be prompted on next print.')),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0882C8),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Change Printer'),
+                                ),
                               ],
                             ),
                           ),

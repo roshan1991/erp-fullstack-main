@@ -23,6 +23,8 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
   TextEditingController? _activeController;
+  // Map of Product ID to Discount percentage
+  final Map<String, double> _selectedDiscounts = {};
 
   @override
   void initState() {
@@ -59,12 +61,16 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
     }
 
     // Prepare list of labels to render sequentially
-    final List<Product> labelsToPrint = [];
+    final List<Map<String, dynamic>> labelsToPrint = [];
     _printQuantities.forEach((id, qty) {
       try {
         final product = allProducts.firstWhere((p) => p.id == id);
+        final discount = _selectedDiscounts[id] ?? 0.0;
         for (int i = 0; i < qty; i++) {
-          labelsToPrint.add(product);
+          labelsToPrint.add({
+            'product': product,
+            'discount': discount,
+          });
         }
       } catch (e) {
         // Product not found, ignore
@@ -73,93 +79,83 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
 
     final doc = pw.Document();
 
-    // Standard A4 Layout with multiple sticker labels per page (e.g. 5 columns, 10 rows approx)
-    const labelWidth = 100.0;
-    const labelHeight = 60.0;
-
-    doc.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(20),
-        build: (pw.Context context) {
-          return [
-            pw.Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: labelsToPrint.map((prod) {
-                // Ensure there is a SKU or ID for the barcode
-                final barcodeData = (prod.sku.isNotEmpty) ? prod.sku : prod.id;
-                
-                return pw.Container(
-                  width: labelWidth,
-                  height: labelHeight,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
-                  ),
-                  padding: const pw.EdgeInsets.all(4),
-                  child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    children: [
-                      // Product Name (truncated to fit)
-                      pw.Text(
-                        prod.name,
-                        style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-                        maxLines: 1,
-                        overflow: pw.TextOverflow.clip,
-                      ),
-                      pw.SizedBox(height: 2),
-                      
-                      // Barcode Graphic
-                      pw.Expanded(
-                        child: pw.BarcodeWidget(
-                          barcode: pw.Barcode.code128(),
-                          data: barcodeData,
-                          drawText: false,
-                        ),
-                      ),
-                      
-                      pw.SizedBox(height: 2),
-                      
-                      // Row formatting for Data vs Price
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          if ((prod.size != null && prod.size!.isNotEmpty && prod.size != 'null') ||
-                              (prod.sizeNumeric != null && prod.sizeNumeric!.isNotEmpty && prod.sizeNumeric != 'null'))
-                            pw.Text(
-                              '${prod.size ?? ""} ${prod.sizeNumeric ?? ""}'.trim(),
-                              style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                            )
-                          else
-                            pw.SizedBox(),
-                          pw.Text(
-                            'LKR ${prod.price.toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      )
-                    ],
-                  ),
-                );
-              }).toList(),
-            )
-          ];
-        },
-      ),
+    final labelFormat = PdfPageFormat(
+      50 * PdfPageFormat.mm,
+      28 * PdfPageFormat.mm, // 25mm label + 3mm gap
     );
 
+    for (var data in labelsToPrint) {
+      final prod = data['product'] as Product;
+      final discount = data['discount'] as double;
+
+      String barcodeData = (prod.sku.isNotEmpty) ? prod.sku : prod.id;
+      if (discount > 0) {
+        barcodeData = '$barcodeData@${discount.toInt()}';
+      }
+
+      final discountedPrice = prod.price * (1 - (discount / 100));
+
+      doc.addPage(
+        pw.Page(
+          pageFormat: labelFormat,
+          margin: pw.EdgeInsets.zero,
+          build: (context) {
+            return pw.Container(
+              height: 25 * PdfPageFormat.mm,
+              padding: const pw.EdgeInsets.all(2),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    prod.name,
+                    style: pw.TextStyle(fontSize: 6),
+                    maxLines: 1,
+                    overflow: pw.TextOverflow.clip,
+                  ),
+
+                  if (discount > 0) ...[
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      '${discount.toInt()}% OFF',
+                      style: pw.TextStyle(fontSize: 6, color: PdfColors.red),
+                    ),
+                  ],
+
+                  pw.SizedBox(height: 2),
+                  pw.BarcodeWidget(
+                    barcode: pw.Barcode.code128(),
+                    data: barcodeData,
+                    height: 15,
+                    width: double.infinity,
+                    drawText: false,
+                  ),
+                  pw.SizedBox(height: 2),
+
+                  pw.Text(
+                    'LKR ${discount > 0 ? discountedPrice.toStringAsFixed(0) : prod.price.toStringAsFixed(0)}',
+                    style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
     // Standard A4 Layout or Roll? Usually barcode stickers are on rolls or specific sheets.
-    // The user wants direct printing, so we'll generate the PDF and send it.
+    // We use smart matching and saved preferences to print silently if possible.
     final pdfBytes = await doc.save();
     
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('⌛ Sending to Barcode Printer...'), duration: Duration(seconds: 1)),
+        const SnackBar(content: Text('⌛ Preparing Barcode Print...'), duration: Duration(seconds: 1)),
       );
     }
 
-    // Call ReceiptService for direct printing
-    final error = await ReceiptService.directPrintBarcodes(pdfBytes);
+    // Call ReceiptService to handle smart printer selection / printing
+    if (!mounted) return;
+    final error = await ReceiptService.directPrintBarcodes(context, pdfBytes);
 
     if (mounted) {
       if (error == null) {
@@ -272,6 +268,36 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
                                       trailing: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          // Discount Dropdown
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1E1E2C),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: DropdownButton<double>(
+                                              value: _selectedDiscounts[p.id] ?? 0.0,
+                                              dropdownColor: const Color(0xFF2A2A3C),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                                              underline: const SizedBox(),
+                                              items: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0].map((d) {
+                                                return DropdownMenuItem<double>(
+                                                  value: d,
+                                                  child: Text(d == 0 ? 'No Dis' : '${d.toInt()}% Off'),
+                                                );
+                                              }).toList(),
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  if (val == 0) {
+                                                    _selectedDiscounts.remove(p.id);
+                                                  } else {
+                                                    _selectedDiscounts[p.id] = val!;
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
                                           IconButton(
                                             icon: const Icon(Icons.remove_circle_outline, color: Colors.grey),
                                             onPressed: () => _decrementQuantity(p.id),

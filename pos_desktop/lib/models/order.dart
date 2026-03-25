@@ -36,6 +36,8 @@ class OrderModel {
 
       final productId   = (item['product_id'] ?? item['id'] ?? 0).toString();
       final unitPrice   = double.tryParse(item['unit_price']?.toString() ?? '0') ?? 0.0;
+      final originalPrice = double.tryParse(item['original_price']?.toString() ?? item['unit_price']?.toString() ?? '0') ?? 0.0;
+      final discountPercent = double.tryParse(item['discount_percent']?.toString() ?? '0') ?? 0.0;
       final totalPrice  = double.tryParse(item['total_price']?.toString() ?? '0') ?? 0.0;
       final quantity    = int.tryParse(item['quantity']?.toString() ?? '1') ?? 1;
 
@@ -44,7 +46,7 @@ class OrderModel {
           id: productId,
           name: productName,
           description: '',
-          price: unitPrice,
+          price: originalPrice,
           category: '',
           imageUrl: '',
           sku: '',
@@ -54,6 +56,7 @@ class OrderModel {
           }(),
         ),
         quantity: quantity,
+        itemDiscountPercent: discountPercent,
       );
     }).toList();
 
