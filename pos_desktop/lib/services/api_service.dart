@@ -228,9 +228,11 @@ class ApiService {
           {'method': paymentMethod, 'amount': totalAmount}
         ],
         'items': orderItems.map((item) => {
-          'product_id': item['productId'],
+          'product_id': int.tryParse(item['product_id'].toString()) ?? 0,
           'quantity': item['quantity'],
           'unit_price': item['price'],
+          'original_price': item['originalPrice'],
+          'discount_percent': item['itemDiscountPercent'],
         }).toList(),
       };
 
@@ -457,6 +459,64 @@ class ApiService {
       }
     } catch (e) {
       lastError = 'Delete supplier failed: $e';
+      return false;
+    }
+  }
+
+  // ─── Generic HTTP helpers used by the Accounts module ───────────────────────
+  // These hit the unified backend (e.g. http://127.0.0.1:3000/api/accounts/...)
+  
+  /// Generic GET — returns decoded JSON (Map or List) or null on error.
+  Future<dynamic> get(String path) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$serverUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200) {
+        return json.decode(response.body);
+      }
+      lastError = 'GET $path failed (${response.statusCode})';
+      return null;
+    } catch (e) {
+      lastError = 'GET $path error: $e';
+      return null;
+    }
+  }
+
+  /// Generic POST — returns decoded JSON or null on error.
+  Future<dynamic> post(String path, Map<String, dynamic> body) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$serverUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(body),
+      ).timeout(const Duration(seconds: 30));
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return json.decode(response.body);
+      }
+      lastError = 'POST $path failed (${response.statusCode}): ${response.body}';
+      return null;
+    } catch (e) {
+      lastError = 'POST $path error: $e';
+      return null;
+    }
+  }
+
+  /// Generic DELETE — returns true on success.
+  Future<bool> delete(String path) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$serverUrl$path'),
+        headers: {'Content-Type': 'application/json'},
+      ).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200 || response.statusCode == 204) {
+        return true;
+      }
+      lastError = 'DELETE $path failed (${response.statusCode}): ${response.body}';
+      return false;
+    } catch (e) {
+      lastError = 'DELETE $path error: $e';
       return false;
     }
   }

@@ -9,7 +9,11 @@ class Product {
   final int stockCount;
   final String? supplierId;
   final String? size;
+  final String? sizeNumeric;
   final double costPrice;
+
+  /// Alias for costPrice — matches the SQLite backend column `buying_price`.
+  double get buyingPrice => costPrice;
 
   Product({
     required this.id,
@@ -22,6 +26,7 @@ class Product {
     this.stockCount = 0,
     this.supplierId,
     this.size,
+    this.sizeNumeric,
     this.costPrice = 0.0,
   });
 
@@ -37,7 +42,10 @@ class Product {
       stockCount: int.tryParse(json['stock_quantity']?.toString() ?? json['stock_count']?.toString() ?? json['stockCount']?.toString() ?? '0') ?? 0,
       supplierId: json['supplier_id']?.toString(),
       size: (json['size'] == null || json['size'] == 'null') ? null : json['size'].toString(),
-      costPrice: double.tryParse(json['cost_price']?.toString() ?? '0') ?? 0.0,
+      sizeNumeric: (json['size_numeric'] == null || json['size_numeric'] == 'null') ? null : json['size_numeric'].toString(),
+      // Read buying_price (SQLite) OR cost_price (legacy) — whichever is present
+      costPrice: double.tryParse(json['buying_price']?.toString() ?? json['cost_price']?.toString() ?? '0') ?? 0.0,
     );
   }
 }
+

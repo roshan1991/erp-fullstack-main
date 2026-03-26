@@ -1,0 +1,7 @@
+Building Windows application...                                 
+lib/screens/barcodes_screen.dart(113,47): error G75B77105: Member not found: 'ellipsis'. [C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\flutter\flutter_assemble.vcxproj]
+lib/services/receipt_service.dart(42,11): error GC6690633: No named parameter with the name 'marginAll'. [C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\flutter\flutter_assemble.vcxproj]
+lib/services/receipt_service.dart(333,9): error GE5CFE876: The method 'timeout' isn't defined for the type 'FutureOr<bool>'. [C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\flutter\flutter_assemble.vcxproj]
+C:\Program Files\Microsoft Visual Studio\18\Community\MSBuild\Microsoft\VC\v180\Microsoft.CppCommon.targets(254,5): error MSB8066: Custom build for 'C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\CMakeFiles\e7ac6d7f2c48871c3f83e05f6ce8c9e5\flutter_windows.dll.rule;C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\CMakeFiles\f944dc4dfc2692a60d67e34ea1072ea4\flutter_assemble.rule' exited with code 1. [C:\Users\Ajay\Desktop\si\ERP_SW_ALL\sysERP\erp-fullstack-main\pos_desktop\build\windows\x64\flutter\flutter_assemble.vcxproj]
+Building Windows application...                                    25.0s
+Build process failed.

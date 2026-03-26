@@ -16,7 +16,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // API Routes
-// API Routes
+const accountsRoutes = require('./routes/accounts_full');
+app.use('/api/accounts', accountsRoutes);
+
+// Elais AI
+app.use('/api/elais', require('./routes/elais'));
+
 app.use("/api/v1", apiRoutes);
 
 // Swagger Documentation
@@ -53,40 +58,42 @@ const startServer = async () => {
     console.log('--- Server Restart Triggered ---');
     try {
         // Test database connection
-        await sequelize.authenticate();
-        console.log('✅ Database connection established successfully.');
-
-        // Initialize models and associations
-        const { User } = require('./models/index'); // This loads all models and sets up associations
-
-
-        // ...
-
-        // Sync database models
-        console.log('🔄 Syncing database models...');
-        await sequelize.sync({ alter: false }); // alter:true causes ER_TOO_MANY_KEYS over time
-        console.log('✅ Database models synced.');
-
-        // Seed Admin User
         try {
-            const adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
-            if (!adminExists) {
-                console.log('🔄 Creating default admin user...');
-                const hashedPassword = await User.hashPassword('admin');
-                await User.create({
-                    username: 'admin',
-                    email: 'admin@example.com',
-                    hashed_password: hashedPassword,
-                    full_name: 'System Administrator',
-                    is_active: true,
-                    is_superuser: true,
-                    role: 'admin',
-                    branch_id: null
-                });
-                console.log('✅ Admin user created: admin / admin');
+            await sequelize.authenticate();
+            console.log('✅ Database connection established successfully.');
+            
+            // Sync database models
+            console.log('🔄 Syncing database models...');
+            await sequelize.sync({ alter: false });
+            console.log('✅ Database models synced.');
+        } catch (dbError) {
+            console.warn('⚠️ MySQL Database not connected. Some features may be limited.');
+            console.warn('   (SQLite features like Elais and Accounts will still work)');
+        }
+
+        // Seed Admin User (only if DB is connected)
+        if (sequelize.models.User) {
+            try {
+                const { User } = require('./models/index');
+                const adminExists = await User.findOne({ where: { email: 'admin@example.com' } });
+                if (!adminExists) {
+                    console.log('🔄 Creating default admin user...');
+                    const hashedPassword = await User.hashPassword('admin');
+                    await User.create({
+                        username: 'admin',
+                        email: 'admin@example.com',
+                        hashed_password: hashedPassword,
+                        full_name: 'System Administrator',
+                        is_active: true,
+                        is_superuser: true,
+                        role: 'admin',
+                        branch_id: null
+                    });
+                    console.log('✅ Admin user created: admin / admin');
+                }
+            } catch (seedError) {
+                console.error('⚠️ Failed to seed admin user:', seedError);
             }
-        } catch (seedError) {
-            console.error('⚠️ Failed to seed admin user:', seedError);
         }
 
         // Create HTTP server and initialize Socket.IO
@@ -116,6 +123,8 @@ const startServer = async () => {
             console.log(`🔌 API: http://localhost:${PORT}/api/v1`);
             console.log(`📚 Docs: http://localhost:${PORT}/api-docs`);
             console.log(`\n💡 Press Ctrl+C to stop\n`);
+            
+            checkOllama();
         });
     } catch (error) {
         console.error('❌ Unable to start server:', error);
@@ -129,3 +138,18 @@ process.on('SIGINT', () => {
     console.log('Server shutting down...');
     process.exit(0);
 });
+
+async function checkOllama() {
+    try {
+        const response = await fetch('http://localhost:11434/api/tags');
+        if (response.ok) {
+            const data = await response.json();
+            const models = data.models?.map(m => m.name).join(', ') || 'none';
+            console.log('[Elais] ✅ Ollama is running. Available models: ' + models);
+        } else {
+            console.warn('[Elais] ⚠️ Ollama returned an error. AI features might be limited.');
+        }
+    } catch (err) {
+        console.warn('[Elais] ❌ WARNING: Ollama not detected on port 11434. AI features will be unavailable.');
+    }
+}

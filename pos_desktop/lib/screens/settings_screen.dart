@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../providers/pos_provider.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/app_keyboard.dart';
@@ -14,6 +15,10 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _urlController;
+  late TextEditingController _elaisOnlineUrlController;
+  late TextEditingController _elaisOnlineKeyController;
+  late TextEditingController _elaisOnlineModelController;
+  late TextEditingController _elaisPersonalityController;
   TextEditingController? _activeController;
 
   // List of actual printers fetched from the system
@@ -25,6 +30,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.initState();
     final provider = Provider.of<PosProvider>(context, listen: false);
     _urlController = TextEditingController(text: provider.serverUrl);
+    _elaisOnlineUrlController = TextEditingController(text: provider.elaisOnlineUrl);
+    _elaisOnlineKeyController = TextEditingController(text: provider.elaisOnlineKey);
+    _elaisOnlineModelController = TextEditingController(text: provider.elaisOnlineModel);
+    _elaisPersonalityController = TextEditingController(text: provider.elaisPersonality);
     _loadPrinters(); // Load initially
   }
 
@@ -44,6 +53,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _urlController.dispose();
+    _elaisOnlineUrlController.dispose();
+    _elaisOnlineKeyController.dispose();
+    _elaisOnlineModelController.dispose();
+    _elaisPersonalityController.dispose();
     super.dispose();
   }
 
@@ -222,6 +235,52 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                           const SizedBox(height: 24),
 
+                          // Barcode Printer Setting
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A2A3C),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                const Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'Barcode Printer',
+                                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      'Reset saved thermal printer for barcodes',
+                                      style: TextStyle(color: Colors.grey, fontSize: 13),
+                                    ),
+                                  ],
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    final prefs = await SharedPreferences.getInstance();
+                                    await prefs.remove('barcode_printer_name');
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Barcode printer cleared. You will be prompted on next print.')),
+                                      );
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF0882C8),
+                                    foregroundColor: Colors.white,
+                                  ),
+                                  child: const Text('Change Printer'),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 24),
+
                           // Barcode Scanner Setting
                           Container(
                             padding: const EdgeInsets.all(20),
@@ -294,54 +353,177 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
                           // Server URL Setting (Admin Only)
                           if (provider.isAdmin)
-                            Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF2A2A3C),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text(
-                                    'Server Configuration',
-                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  TextField(
-                                    controller: _urlController,
-                                    readOnly: provider.useOnScreenKeyboard,
-                                    onTap: () {
-                                      if (provider.useOnScreenKeyboard) {
-                                        setState(() => _activeController = _urlController);
-                                      }
-                                    },
-                                    style: const TextStyle(color: Colors.white),
-                                    decoration: InputDecoration(
-                                      labelText: 'API Base URL',
-                                      hintText: 'e.g. https://erp.reon.lk/api/v1',
-                                      filled: true,
-                                      fillColor: const Color(0xFF1E1E2C),
-                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ElevatedButton(
-                                    onPressed: () {
-                                      provider.updateServerUrl(_urlController.text.trim());
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('✅ Server URL updated successfully!')),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF0882C8),
-                                      foregroundColor: Colors.white,
-                                    ),
-                                    child: const Text('Save URL'),
-                                  ),
-                                ],
+                            _buildSettingCard(
+                              title: 'Server URL',
+                              subtitle: 'Backend API endpoint',
+                              trailing: SizedBox(
+                                width: 200,
+                                child: TextField(
+                                  controller: TextEditingController(text: provider.apiService.baseUrl),
+                                  onSubmitted: (val) => provider.apiService.updateBaseUrl(val),
+                                  decoration: const InputDecoration(isDense: true),
+                                ),
                               ),
                             ),
+
+                          const SizedBox(height: 24),
+
+                          // Elais AI Settings
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF2A2A3C),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Column(crossAxisAlignment: CrossAxisAlignment.start, children: const [
+                                      Text('Elais AI assistant', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                                      SizedBox(height: 4),
+                                      Text('Configure offline & online AI features', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                    ]),
+                                    Switch(
+                                      value: provider.elaisEnabled,
+                                      onChanged: (val) => provider.setElaisEnabled(val),
+                                      activeThumbColor: const Color(0xFFD2042D), // Cherry Red
+                                    ),
+                                  ],
+                                ),
+                                const Divider(height: 32, color: Colors.white10),
+                                
+                                const Text('AI Source', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(color: const Color(0xFF1E1E2C), borderRadius: BorderRadius.circular(10)),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: provider.elaisSource,
+                                      isExpanded: true,
+                                      dropdownColor: const Color(0xFF2A2A3C),
+                                      items: const [
+                                        DropdownMenuItem(value: 'local', child: Text('Local (Ollama)')),
+                                        DropdownMenuItem(value: 'online', child: Text('Online (Cloud)')),
+                                      ],
+                                      onChanged: (val) => provider.updateSetting('elais_source', val!),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+
+                                if (provider.elaisSource == 'local') ...[
+                                  const Text('Ollama Model', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(color: const Color(0xFF1E1E2C), borderRadius: BorderRadius.circular(10)),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String>(
+                                        value: provider.elaisModel,
+                                        isExpanded: true,
+                                        dropdownColor: const Color(0xFF2A2A3C),
+                                        items: ['phi3:mini', 'llama3', 'mistral', 'gemma'].map((m) => DropdownMenuItem<String>(value: m, child: Text(m))).toList(),
+                                        onChanged: (val) => provider.updateSetting('elais_model', val!),
+                                      ),
+                                    ),
+                                  ),
+                                ] else ...[
+                                  const Text('Online API URL', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineUrlController,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'https://ollama.com/api/chat',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Online API Key', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineKeyController,
+                                    style: const TextStyle(fontSize: 13),
+                                    obscureText: true,
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'Enter API Key',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  const Text('Online Model Name', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                  const SizedBox(height: 8),
+                                  TextField(
+                                    controller: _elaisOnlineModelController,
+                                    style: const TextStyle(fontSize: 13),
+                                    decoration: InputDecoration(
+                                      filled: true,
+                                      fillColor: const Color(0xFF1E1E2C),
+                                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                      hintText: 'qwen3.5',
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    child: ElevatedButton(
+                                      onPressed: () {
+                                        provider.updateSetting('elais_online_url', _elaisOnlineUrlController.text);
+                                        provider.updateSetting('elais_online_key', _elaisOnlineKeyController.text);
+                                        provider.updateSetting('elais_online_model', _elaisOnlineModelController.text);
+                                        provider.updateSetting('elais_personality', _elaisPersonalityController.text);
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('AI assistant settings saved!')));
+                                      },
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD2042D)),
+                                      child: const Text('Save Online Configuration', style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                ],
+                                
+                                const SizedBox(height: 16),
+                                const Text('Elais Personality', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                                const SizedBox(height: 8),
+                                TextField(
+                                  maxLines: 2,
+                                  controller: _elaisPersonalityController,
+                                  style: const TextStyle(fontSize: 13),
+                                  decoration: InputDecoration(
+                                    filled: true,
+                                    fillColor: const Color(0xFF1E1E2C),
+                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  onSubmitted: (val) => provider.updateSetting('elais_personality', val),
+                                ),
+                                const SizedBox(height: 16),
+                                Row(
+                                  children: [
+                                    ElevatedButton.icon(
+                                      onPressed: () async {
+                                        final res = await provider.chatWithElais('Hello, are you connected?');
+                                        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Elais: $res')));
+                                      },
+                                      icon: const Icon(Icons.bolt, size: 16),
+                                      label: const Text('Test Connection'),
+                                      style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD2042D), foregroundColor: Colors.white),
+                                    ),
+                                    const Spacer(),
+                                    Text(
+                                      provider.elaisSource == 'local' ? 'Ollama (11434)' : 'Online Cloud', 
+                                      style: TextStyle(color: provider.elaisSource == 'local' ? Colors.greenAccent : Colors.blueAccent, fontSize: 11)
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
 
                           const SizedBox(height: 32),
                           
@@ -356,7 +538,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               icon: const Icon(Icons.logout),
                               label: const Text('Logout'),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red.withValues(alpha: 0.1),
+                                backgroundColor: Colors.red.withOpacity(0.1),
                                 foregroundColor: Colors.red,
                                 side: const BorderSide(color: Colors.red),
                                 padding: const EdgeInsets.symmetric(vertical: 16),

@@ -7,6 +7,8 @@ import '../providers/pos_provider.dart';
 import '../models/product.dart';
 import '../widgets/sidebar.dart';
 import '../widgets/app_keyboard.dart';
+import '../services/receipt_service.dart';
+
 
 class BarcodesScreen extends StatefulWidget {
   const BarcodesScreen({Key? key}) : super(key: key);
@@ -21,6 +23,8 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
   String _searchQuery = '';
   final TextEditingController _searchCtrl = TextEditingController();
   TextEditingController? _activeController;
+  // Map of Product ID to Discount percentage
+  final Map<String, double> _selectedDiscounts = {};
 
   @override
   void initState() {
@@ -57,12 +61,16 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
     }
 
     // Prepare list of labels to render sequentially
-    final List<Product> labelsToPrint = [];
+    final List<Map<String, dynamic>> labelsToPrint = [];
     _printQuantities.forEach((id, qty) {
       try {
         final product = allProducts.firstWhere((p) => p.id == id);
+        final discount = _selectedDiscounts[id] ?? 0.0;
         for (int i = 0; i < qty; i++) {
-          labelsToPrint.add(product);
+          labelsToPrint.add({
+            'product': product,
+            'discount': discount,
+          });
         }
       } catch (e) {
         // Product not found, ignore
@@ -71,84 +79,123 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
 
     final doc = pw.Document();
 
-    // Standard A4 Layout with multiple sticker labels per page (e.g. 5 columns, 10 rows approx)
-    const labelWidth = 100.0;
-    const labelHeight = 60.0;
+    final labelFormat = PdfPageFormat(
+      50 * PdfPageFormat.mm,
+      28 * PdfPageFormat.mm, // 25mm label + 3mm gap
+    );
 
-    doc.addPage(
-      pw.MultiPage(
-        pageFormat: PdfPageFormat.a4,
-        margin: const pw.EdgeInsets.all(20),
-        build: (pw.Context context) {
-          return [
-            pw.Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: labelsToPrint.map((prod) {
-                // Ensure there is a SKU or ID for the barcode
-                final barcodeData = (prod.sku.isNotEmpty) ? prod.sku : prod.id;
-                
-                return pw.Container(
-                  width: labelWidth,
-                  height: labelHeight,
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.grey300),
+    for (var data in labelsToPrint) {
+      final prod = data['product'] as Product;
+      final discount = data['discount'] as double;
+
+      String barcodeData = (prod.sku.isNotEmpty) ? prod.sku : prod.id;
+      if (discount > 0) {
+        barcodeData = '$barcodeData@${discount.toInt()}';
+      }
+
+      final discountedPrice = prod.price * (1 - (discount / 100));
+
+      doc.addPage(
+        pw.Page(
+          pageFormat: labelFormat,
+          margin: pw.EdgeInsets.zero,
+          build: (context) {
+            return pw.Container(
+              height: 25 * PdfPageFormat.mm,
+              padding: const pw.EdgeInsets.all(1 * PdfPageFormat.mm),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    prod.name,
+                    style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
+                    maxLines: 1,
+                    overflow: pw.TextOverflow.clip,
                   ),
-                  padding: const pw.EdgeInsets.all(4),
-                  child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
+
+                  if (discount > 0) ...[
+                    pw.SizedBox(height: 1),
+                    pw.Text(
+                      '${discount.toInt()}% OFF',
+                      style: pw.TextStyle(fontSize: 7, color: PdfColors.red, fontWeight: pw.FontWeight.bold),
+                    ),
+                  ],
+
+                  pw.SizedBox(height: 1),
+                  pw.SizedBox(
+                    height: 8 * PdfPageFormat.mm,
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.code128(),
+                      data: barcodeData,
+                      width: double.infinity,
+                      drawText: false,
+                    ),
+                  ),
+                  pw.SizedBox(height: 1),
+
+                  pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
-                      // Product Name (truncated to fit)
                       pw.Text(
-                        prod.name,
-                        style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
-                        maxLines: 1,
-                        overflow: pw.TextOverflow.clip,
+                        '${prod.size ?? ""} ${prod.sizeNumeric ?? ""}'.trim(),
+                        style: pw.TextStyle(fontSize: 7),
                       ),
-                      pw.SizedBox(height: 2),
-                      
-                      // Barcode Graphic
-                      pw.Expanded(
-                        child: pw.BarcodeWidget(
-                          barcode: pw.Barcode.code128(),
-                          data: barcodeData,
-                          drawText: false,
-                        ),
-                      ),
-                      
-                      pw.SizedBox(height: 2),
-                      
-                      // Row formatting for Data vs Price
-                      pw.Row(
-                        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                        children: [
-                          if (prod.size != null && prod.size!.isNotEmpty && prod.size != 'null')
+                      if (discount > 0)
+                        pw.Column(
+                          crossAxisAlignment: pw.CrossAxisAlignment.end,
+                          children: [
                             pw.Text(
-                              prod.size!,
-                              style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                            )
-                          else
-                            pw.SizedBox(),
-                          pw.Text(
-                            'LKR ${prod.price.toStringAsFixed(2)}',
-                            style: pw.TextStyle(fontSize: 7, fontWeight: pw.FontWeight.bold),
-                          ),
-                        ],
-                      )
+                              'LKR ${prod.price.toStringAsFixed(0)}',
+                              style: pw.TextStyle(fontSize: 5, color: PdfColors.grey, decoration: pw.TextDecoration.lineThrough),
+                            ),
+                            pw.Text(
+                              'LKR ${discountedPrice.toStringAsFixed(0)}',
+                              style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                            ),
+                          ],
+                        )
+                      else
+                        pw.Text(
+                          'LKR ${prod.price.toStringAsFixed(0)}',
+                          style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold),
+                        ),
                     ],
                   ),
-                );
-              }).toList(),
-            )
-          ];
-        },
-      ),
-    );
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
 
-    await Printing.layoutPdf(
-      onLayout: (PdfPageFormat format) async => doc.save(),
-      name: 'Batch_Barcodes_${DateTime.now().toIso8601String()}.pdf',
-    );
+    // Standard A4 Layout or Roll? Usually barcode stickers are on rolls or specific sheets.
+    // We use smart matching and saved preferences to print silently if possible.
+    final pdfBytes = await doc.save();
+    
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('⌛ Preparing Barcode Print...'), duration: Duration(seconds: 1)),
+      );
+    }
+
+    // Call ReceiptService to handle smart printer selection / printing
+    if (!mounted) return;
+    final error = await ReceiptService.directPrintBarcodes(context, pdfBytes);
+
+    if (mounted) {
+      if (error == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('✅ Barcodes sent to printer successfully!'), backgroundColor: Colors.green),
+        );
+        setState(() => _printQuantities.clear());
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('⚠️ Print failed: $error'), backgroundColor: Colors.red),
+        );
+      }
+    }
   }
 
   @override
@@ -242,12 +289,42 @@ class _BarcodesScreenState extends State<BarcodesScreen> {
                                     child: ListTile(
                                       title: Text(p.name, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
                                       subtitle: Text(
-                                        'SKU: ${p.sku.isEmpty ? 'N/A' : p.sku} | Size: ${p.size ?? "N/A"} | Category: ${p.category} | Stock: ${p.stockCount}',
+                                        'SKU: ${p.sku.isEmpty ? 'N/A' : p.sku} | Size: ${p.size ?? ""} ${p.sizeNumeric ?? ""} | Category: ${p.category} | Stock: ${p.stockCount}',
                                         style: const TextStyle(color: Colors.white70),
                                       ),
                                       trailing: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
+                                          // Discount Dropdown
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF1E1E2C),
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: DropdownButton<double>(
+                                              value: _selectedDiscounts[p.id] ?? 0.0,
+                                              dropdownColor: const Color(0xFF2A2A3C),
+                                              style: const TextStyle(color: Colors.white, fontSize: 13),
+                                              underline: const SizedBox(),
+                                              items: [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 40.0, 50.0].map((d) {
+                                                return DropdownMenuItem<double>(
+                                                  value: d,
+                                                  child: Text(d == 0 ? 'No Dis' : '${d.toInt()}% Off'),
+                                                );
+                                              }).toList(),
+                                              onChanged: (val) {
+                                                setState(() {
+                                                  if (val == 0) {
+                                                    _selectedDiscounts.remove(p.id);
+                                                  } else {
+                                                    _selectedDiscounts[p.id] = val!;
+                                                  }
+                                                });
+                                              },
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
                                           IconButton(
                                             icon: const Icon(Icons.remove_circle_outline, color: Colors.grey),
                                             onPressed: () => _decrementQuantity(p.id),

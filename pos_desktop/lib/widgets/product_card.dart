@@ -60,7 +60,8 @@ class ProductCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                   const SizedBox(height: 4),
-                  if (product.size != null && product.size!.isNotEmpty)
+                  if ((product.size != null && product.size!.isNotEmpty && product.size != 'null') || 
+                      (product.sizeNumeric != null && product.sizeNumeric!.isNotEmpty && product.sizeNumeric != 'null'))
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
@@ -68,7 +69,7 @@ class ProductCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        'Size: ${product.size}',
+                        'Size: ${product.size ?? ""} ${product.sizeNumeric ?? ""}'.trim(),
                         style: const TextStyle(color: Color(0xFF0882C8), fontSize: 10, fontWeight: FontWeight.bold),
                       ),
                     ),
@@ -100,12 +101,18 @@ class ProductCard extends StatelessWidget {
                           ),
                         ],
                       ),
-                      Text(
-                        '${product.stockCount} items',
-                        style: const TextStyle(
-                          color: Colors.grey,
-                          fontSize: 12,
-                        ),
+                      Consumer<PosProvider>(
+                        builder: (context, provider, child) {
+                          final info = provider.getProductStockInfo(product.id);
+                          final dynamicStock = info['stock'] ?? 0;
+                          return Text(
+                            '$dynamicStock items',
+                            style: TextStyle(
+                              color: dynamicStock <= 5 ? Colors.red : Colors.grey,
+                              fontSize: 12,
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

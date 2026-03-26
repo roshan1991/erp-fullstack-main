@@ -122,6 +122,11 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
                                               mainAxisSize: MainAxisSize.min,
                                               children: [
                                                 IconButton(
+                                                  icon: const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D)),
+                                                  onPressed: () => _showElaisScorecard(context, provider, s),
+                                                  tooltip: 'Elais Scorecard',
+                                                ),
+                                                IconButton(
                                                   icon: const Icon(Icons.edit, color: Color(0xFF0882C8)),
                                                   onPressed: () => _showSupplierDialog(context, supplier: s),
                                                 ),
@@ -240,6 +245,66 @@ class _SuppliersScreenState extends State<SuppliersScreen> {
         filled: true,
         fillColor: const Color(0xFF1E1E2C),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  void _showElaisScorecard(BuildContext context, PosProvider provider, Supplier s) {
+    showDialog(
+      context: context,
+      builder: (ctx) => FutureBuilder<Map<String, dynamic>?>(
+        future: provider.getSupplierScorecard(s.id),
+        builder: (context, snapshot) {
+          final loading = snapshot.connectionState == ConnectionState.waiting;
+          final data = snapshot.data;
+          
+          return AlertDialog(
+            backgroundColor: const Color(0xFF2A2A3C),
+            title: Row(children: [
+              const Icon(Icons.auto_awesome, color: const Color(0xFFD2042D), size: 20),
+              const SizedBox(width: 8),
+              Text('Elais Scorecard: ${s.name}', style: const TextStyle(fontSize: 18)),
+            ]),
+            content: SizedBox(
+              width: 400,
+              child: loading 
+                ? const Column(mainAxisSize: MainAxisSize.min, children: [
+                    SizedBox(height: 20),
+                    CircularProgressIndicator(color: const Color(0xFFD2042D)),
+                    SizedBox(height: 20),
+                    Text('Analyzing supplier performance...', style: TextStyle(color: Colors.white70)),
+                  ])
+                : data == null
+                  ? const Text('Could not generate scorecard at this time.', style: TextStyle(color: Colors.white38))
+                  : Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('AI Performance Summary', style: TextStyle(color: const Color(0xFFD2042D), fontWeight: FontWeight.bold)),
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.black26,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.white10),
+                          ),
+                          child: Text(
+                            data['summary'] ?? 'No summary available.',
+                            style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.5),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        const Text('Historical Data', style: TextStyle(color: Colors.white38, fontSize: 12)),
+                        const Text('Integration with supply chain module pending.', style: TextStyle(color: Colors.white24, fontSize: 11)),
+                      ],
+                    ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Close')),
+            ],
+          );
+        },
       ),
     );
   }

@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import '../providers/pos_provider.dart';
 import '../models/order.dart';
+import '../models/cart_item.dart';
 import '../services/receipt_service.dart';
 
 class CartPanel extends StatefulWidget {
@@ -38,6 +39,8 @@ class _CartPanelState extends State<CartPanel> {
       };
     });
   }
+
+  // Removed local _fetchSuggestion logic as AI analysis is now reactive via PosProvider
 
   @override
   void dispose() {
@@ -103,18 +106,8 @@ class _CartPanelState extends State<CartPanel> {
             ? provider.orderHistory.first 
             : tempOrder;
 
-        final printer = provider.selectedPrinterName;
-        if (printer != null && printer.isNotEmpty) {
-          final printError = await ReceiptService.printReceipt(finalOrder, printer);
-          if (printError != null && mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('⚠️ Print failed: $printError'),
-              backgroundColor: Colors.orange,
-            ));
-          }
-        } else {
-          await ReceiptService.showPrintPreview(context, finalOrder);
-        }
+        // Show the window's print selection pop up to print
+        await ReceiptService.showPrintPreview(context, finalOrder);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
@@ -189,7 +182,20 @@ class _CartPanelState extends State<CartPanel> {
               ],
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 12),
+          // --- Elais AI Intelligence Section ---
+          if (provider.cart.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 4.0),
+              child: Column(
+                children: [
+                  // 2. Profit Analysis (Blue Box) - Instant updates from local calculated profit
+                  // 2. Profit Analysis (Blue Box) - Removed as per user request
+// _buildProfitBox(provider),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
 
           // ── Cart Items ───────────────────────────────────────────
           Expanded(
@@ -215,108 +221,131 @@ class _CartPanelState extends State<CartPanel> {
 
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 16.0),
-                        child: Row(
-                          children: [
-                            // Thumbnail
-                            Container(
-                              width: 60,
-                              height: 60,
-                              decoration: BoxDecoration(
-                                color: Colors.grey[800],
-                                borderRadius: BorderRadius.circular(12),
-                                image: item.product.imageUrl.isNotEmpty
-                                    ? DecorationImage(
-                                        image: NetworkImage(item.product.imageUrl),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: item.product.imageUrl.isEmpty
-                                  ? const Icon(Icons.shopping_bag, color: Colors.grey)
-                                  : null,
-                            ),
-                            const SizedBox(width: 12),
-                            // Name & qty
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: item.hasDiscount
+                                ? const Color(0xFF1B3A2A)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(10),
+                            border: item.hasDiscount
+                                ? Border.all(color: const Color(0xFF4CAF50).withOpacity(0.35))
+                                : null,
+                          ),
+                          padding: item.hasDiscount
+                              ? const EdgeInsets.symmetric(horizontal: 8, vertical: 6)
+                              : EdgeInsets.zero,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
                                 children: [
-                                  Text(
-                                    item.product.name,
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
+                                  // Thumbnail
+                                  Container(
+                                    width: 60,
+                                    height: 60,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[800],
+                                      borderRadius: BorderRadius.circular(12),
+                                      image: item.product.imageUrl.isNotEmpty
+                                          ? DecorationImage(
+                                              image: NetworkImage(item.product.imageUrl),
+                                              fit: BoxFit.cover,
+                                            )
+                                          : null,
+                                    ),
+                                    child: item.product.imageUrl.isEmpty
+                                        ? const Icon(Icons.shopping_bag, color: Colors.grey)
+                                        : null,
                                   ),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      Text(
-                                        'x ${item.quantity}',
-                                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
-                                      ),
-                                      if (item.product.size != null && item.product.size!.isNotEmpty) ...[
-                                        const SizedBox(width: 8),
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFF0882C8).withOpacity(0.1),
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            item.product.size!,
-                                            style: const TextStyle(color: Color(0xFF0882C8), fontSize: 9, fontWeight: FontWeight.bold),
-                                          ),
+                                  const SizedBox(width: 12),
+                                  // Name & qty
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item.product.name,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
+                                        const SizedBox(height: 4),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'x ${item.quantity}',
+                                              style: TextStyle(color: Colors.grey[400], fontSize: 12),
+                                            ),
+                                            if ((item.product.size != null && item.product.size!.isNotEmpty && item.product.size != 'null') || 
+                                                (item.product.sizeNumeric != null && item.product.sizeNumeric!.isNotEmpty && item.product.sizeNumeric != 'null')) ...[
+                                              const SizedBox(width: 8),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF0882C8).withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  '${item.product.size ?? ""} ${item.product.sizeNumeric ?? ""}'.trim(),
+                                                  style: const TextStyle(color: Color(0xFF0882C8), fontSize: 9, fontWeight: FontWeight.bold),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                        if (isOutOfStock)
+                                          const Text(
+                                            'Out of Stock',
+                                            style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
+                                          )
+                                        else if (isStockLow)
+                                          Text(
+                                            'Low Stock (${stockInfo['stock']})',
+                                            style: const TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
+                                          )
+                                        else
+                                          Text(
+                                            'Stock: ${stockInfo['stock']}',
+                                            style: TextStyle(color: Colors.green[400], fontSize: 10),
+                                          ),
                                       ],
+                                    ),
+                                  ),
+                                  // Price & Controls
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      _buildPriceDisplay(item),
+                                      const SizedBox(height: 8),
+                                      Row(
+                                        children: [
+                                          _qtyBtn(
+                                            Icons.remove,
+                                            () => provider.updateQuantity(item.product, item.quantity - 1),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          _qtyBtn(
+                                            Icons.add,
+                                            () {
+                                              if (item.quantity < item.product.stockCount) {
+                                                provider.updateQuantity(item.product, item.quantity + 1);
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                  if (isOutOfStock)
-                                    const Text(
-                                      'Out of Stock',
-                                      style: TextStyle(color: Colors.red, fontSize: 10, fontWeight: FontWeight.bold),
-                                    )
-                                  else if (isStockLow)
-                                    Text(
-                                      'Low Stock (${stockInfo['stock']})',
-                                      style: const TextStyle(color: Colors.orange, fontSize: 10, fontWeight: FontWeight.bold),
-                                    )
-                                  else
-                                    Text(
-                                      'Stock: ${stockInfo['stock']}',
-                                      style: TextStyle(color: Colors.green[400], fontSize: 10),
-                                    ),
                                 ],
                               ),
-                            ),
-                            // Price & Controls
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  'LKR ${item.totalPrice.toStringAsFixed(2)}',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                const SizedBox(height: 8),
-                                Row(
-                                  children: [
-                                    _qtyBtn(
-                                      Icons.remove,
-                                      () => provider.updateQuantity(item.product, item.quantity - 1),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    _qtyBtn(
-                                      Icons.add,
-                                      () {
-                                        if (item.quantity < item.product.stockCount) {
-                                          provider.updateQuantity(item.product, item.quantity + 1);
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ],
+                              // Per-item discount dropdown row
+                              _ItemDiscountRow(
+                                item: item,
+                                onDiscountChanged: (pct) =>
+                                    provider.updateItemDiscount(item.product.id, pct),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -514,11 +543,22 @@ class _CartPanelState extends State<CartPanel> {
                 // ── Subtotal ─────────────────────────────────────
                 _summaryRow('Sub Total', 'LKR ${provider.subtotal.toStringAsFixed(2)}'),
 
-                // ── Discount ─────────────────────────────────────
+                // ── Item-Level Discounts ──────────────────────────
+                if (provider.itemDiscountTotal > 0) ...[
+                  const SizedBox(height: 10),
+                  _summaryRow(
+                    'Item Discounts',
+                    '-LKR ${provider.itemDiscountTotal.toStringAsFixed(2)}',
+                    valueColor: const Color(0xFF4CAF50),
+                    labelColor: const Color(0xFF4CAF50),
+                  ),
+                ],
+
+                // ── Promo / Cart-Level Discounts ──────────────────
                 if (provider.discount > 0) ...[
                   const SizedBox(height: 10),
                   _summaryRow(
-                    'Total Discount',
+                    'Promo Discount',
                     '-LKR ${provider.discount.toStringAsFixed(2)}',
                     valueColor: Colors.green,
                     labelColor: Colors.green,
@@ -611,6 +651,206 @@ class _CartPanelState extends State<CartPanel> {
         Text(value,
             style: TextStyle(fontWeight: FontWeight.bold, color: valueColor)),
       ],
+    );
+  }
+
+  Widget _buildBundleBox(String message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFD2042D).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFD2042D).withOpacity(0.3)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.auto_awesome, color: Color(0xFFD2042D), size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              message,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProfitBox(PosProvider provider) {
+    final profit = provider.estimatedProfit;
+    final aiMessage = provider.elaisCheckoutAnalysis?['message'] as String?;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0882C8).withOpacity(0.08),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF0882C8).withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.analytics_outlined, color: Color(0xFF0882C8), size: 14),
+              const SizedBox(width: 8),
+              Text(
+                'PROFIT: LKR ${profit.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (provider.isElaisAnalysisLoading) ...[
+                 const SizedBox(width: 8),
+                 const SizedBox(width: 10, height: 10, child: CircularProgressIndicator(strokeWidth: 1.5, color: Color(0xFF0882C8))),
+              ],
+            ],
+          ),
+          if (aiMessage != null && aiMessage.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4.0, left: 22.0),
+              child: Text(
+                aiMessage,
+                style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontStyle: FontStyle.italic),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPriceDisplay(CartItem item) {
+    if (!item.hasDiscount) {
+      return Text(
+        'LKR ${item.totalPrice.toStringAsFixed(2)}',
+        style: const TextStyle(fontWeight: FontWeight.bold),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          'LKR ${item.originalTotalPrice.toStringAsFixed(2)}',
+          style: const TextStyle(
+            fontSize: 10,
+            color: Colors.grey,
+            decoration: TextDecoration.lineThrough,
+            decorationColor: Colors.grey,
+          ),
+        ),
+        Text(
+          'LKR ${item.totalPrice.toStringAsFixed(2)}',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF4CAF50),
+            fontSize: 13,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Per-item discount dropdown widget
+// ─────────────────────────────────────────────────────────────────────────────
+class _ItemDiscountRow extends StatelessWidget {
+  final dynamic item;
+  final ValueChanged<double> onDiscountChanged;
+
+  const _ItemDiscountRow({
+    required this.item,
+    required this.onDiscountChanged,
+  });
+
+  static const _presets = [0.0, 5.0, 10.0, 15.0, 20.0, 25.0, 30.0, 50.0];
+
+  @override
+  Widget build(BuildContext context) {
+    final selected = item.itemDiscountPercent as double;
+    return Padding(
+      padding: const EdgeInsets.only(top: 6.0),
+      child: Row(
+        children: [
+          const Icon(Icons.local_offer_outlined, size: 13, color: Colors.grey),
+          const SizedBox(width: 4),
+          const Text(
+            'Item Discount:',
+            style: TextStyle(fontSize: 11, color: Colors.grey),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            height: 28,
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            decoration: BoxDecoration(
+              color: selected > 0
+                  ? const Color(0xFF4CAF50).withOpacity(0.15)
+                  : const Color(0xFF1E1E2C),
+              borderRadius: BorderRadius.circular(6),
+              border: Border.all(
+                color: selected > 0
+                    ? const Color(0xFF4CAF50).withOpacity(0.5)
+                    : Colors.grey.withOpacity(0.2),
+              ),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<double>(
+                value: selected,
+                isDense: true,
+                dropdownColor: const Color(0xFF1E1E2C),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                  color: selected > 0 ? const Color(0xFF4CAF50) : Colors.grey,
+                ),
+                icon: Icon(
+                  Icons.arrow_drop_down,
+                  size: 16,
+                  color: selected > 0 ? const Color(0xFF4CAF50) : Colors.grey,
+                ),
+                items: _presets.map((pct) {
+                  return DropdownMenuItem<double>(
+                    value: pct,
+                    child: Text(
+                      pct == 0 ? 'None' : '${pct.toInt()}%',
+                      style: TextStyle(
+                        color: pct == 0 ? Colors.grey : const Color(0xFF4CAF50),
+                        fontWeight: pct > 0 ? FontWeight.bold : FontWeight.normal,
+                      ),
+                    ),
+                  );
+                }).toList(),
+                onChanged: (val) {
+                  if (val != null) onDiscountChanged(val);
+                },
+              ),
+            ),
+          ),
+          if (selected > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: const Color(0xFF4CAF50).withOpacity(0.15),
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.4)),
+              ),
+              child: Text(
+                'Save LKR ${item.discountAmount.toStringAsFixed(2)}',
+                style: const TextStyle(
+                  color: Color(0xFF4CAF50),
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
