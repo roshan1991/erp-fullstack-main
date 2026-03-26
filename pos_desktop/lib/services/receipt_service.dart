@@ -93,9 +93,9 @@ class ReceiptService {
                   pw.Table(
                     columnWidths: {
                       0: const pw.FixedColumnWidth(30 * PdfPageFormat.mm),
-                      1: const pw.FixedColumnWidth(10 * PdfPageFormat.mm),
-                      2: const pw.FixedColumnWidth(18 * PdfPageFormat.mm),
-                      3: const pw.FixedColumnWidth(18 * PdfPageFormat.mm),
+                      1: const pw.FixedColumnWidth(5 * PdfPageFormat.mm),
+                      2: const pw.FixedColumnWidth(10 * PdfPageFormat.mm),
+                      3: const pw.FixedColumnWidth(10 * PdfPageFormat.mm),
                     },
                     defaultVerticalAlignment: pw.TableCellVerticalAlignment.top,
                     children: [

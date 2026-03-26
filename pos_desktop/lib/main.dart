@@ -9,6 +9,8 @@ import 'widgets/elais_floating_button.dart';
 import 'services/api_service.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'utils/desktop_setup.dart';
+import 'services/license_service.dart';
+import 'screens/license_view.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,12 +18,14 @@ void main() async {
 
   await initDesktop();
 
+  final bool isLicenseValid = await LicenseService.isLicenseValid();
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => PosProvider()),
       ],
-      child: const POSApp(),
+      child: POSApp(isLicenseValid: isLicenseValid),
     ),
   );
 }
@@ -29,7 +33,8 @@ void main() async {
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 class POSApp extends StatelessWidget {
-  const POSApp({Key? key}) : super(key: key);
+  final bool isLicenseValid;
+  const POSApp({Key? key, required this.isLicenseValid}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -55,7 +60,7 @@ class POSApp extends StatelessWidget {
         cardColor: const Color(0xFF2A2A3C),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: isLicenseValid ? const LoginScreen() : const LicenseActivationScreen(),
       builder: (context, child) => ShortcutWrapper(
         navigatorKey: navigatorKey,
         child: Stack(
