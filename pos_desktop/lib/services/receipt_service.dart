@@ -44,7 +44,7 @@ class ReceiptService {
             child: pw.Padding(
               padding: const pw.EdgeInsets.only(left: 1 * PdfPageFormat.mm),
               child: pw.Container(
-                width: 72 * PdfPageFormat.mm,
+                width: 76 * PdfPageFormat.mm,
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.center,
                   children: [
@@ -92,10 +92,10 @@ class ReceiptService {
                   // 8. Itemized List Table (Max Control for 80mm roll)
                   pw.Table(
                     columnWidths: {
-                      0: const pw.FixedColumnWidth(28 * PdfPageFormat.mm),
+                      0: const pw.FixedColumnWidth(30 * PdfPageFormat.mm),
                       1: const pw.FixedColumnWidth(10 * PdfPageFormat.mm),
-                      2: const pw.FixedColumnWidth(17 * PdfPageFormat.mm),
-                      3: const pw.FixedColumnWidth(17 * PdfPageFormat.mm),
+                      2: const pw.FixedColumnWidth(18 * PdfPageFormat.mm),
+                      3: const pw.FixedColumnWidth(18 * PdfPageFormat.mm),
                     },
                     defaultVerticalAlignment: pw.TableCellVerticalAlignment.top,
                     children: [
